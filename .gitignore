@@ -1,0 +1,10 @@
+__pycache__/
+.pytest_cache/
+*.pyc
+.env
+.venv/
+data/*.json
+timing_runtime_state.json
+/tools/license_keys/private_key.pem
+/license/license.key
+/data/license_state.json
