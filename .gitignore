@@ -1,10 +1,29 @@
+# Python
 __pycache__/
-.pytest_cache/
 *.pyc
+.pytest_cache/
+
+# Environment
 .env
 .venv/
+
+# Runtime / local data
 data/*.json
 timing_runtime_state.json
+
+# Developer license key
 /tools/license_keys/private_key.pem
+
+# Local license/runtime state
 /license/license.key
 /data/license_state.json
+release/license/
+release/data/
+
+# PyInstaller
+build/
+dist/
+
+# Generated releases
+release/*.exe
+release/*.zip

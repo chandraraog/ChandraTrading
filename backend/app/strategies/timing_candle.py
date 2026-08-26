@@ -1,8 +1,15 @@
 """Timing Candle strategy rules.
 
-This module intentionally contains ONLY Timing Candle decision rules.
-It does not know about MT5, paper execution, BotManager, UI, or persistence.
-All prices are kept at their raw precision; rounding is display-only elsewhere.
+Workflow:
+1. A completed Timing Candle locks HIGH and LOW.
+2. A later completed candle closing above HIGH confirms BO and arms BUY.
+3. A later completed candle closing below LOW confirms BD and arms SELL.
+4. After BO/BD, a later price touch of the corresponding level triggers entry
+   immediately (no requirement for the retest candle to close).
+5. BUY uses Timing LOW as the initial SL; SELL uses Timing HIGH as the initial SL.
+
+This module contains only pure decision rules. It does not know about MT5,
+paper execution, BotManager, UI, or persistence. Prices retain raw precision.
 """
 from dataclasses import dataclass
 from typing import Optional

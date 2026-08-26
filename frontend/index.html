@@ -222,7 +222,7 @@ button{padding:7px 11px;border:0;border-radius:6px;cursor:pointer;margin:6px 5px
         <label style="margin-top:12px">Strategies</label>
         <div class="strategy-row">
           <label><input type="checkbox" name="strategy" value="strategic" onchange="strategyChanged()"> Strategic Entry</label>
-          <label><input type="checkbox" name="strategy" value="magical" onchange="strategyChanged()"> Trap Candles</label>
+          <label><input type="checkbox" name="strategy" value="magical" onchange="strategyChanged()"> Magical Entry</label>
           <label><input type="checkbox" name="strategy" value="timing" onchange="strategyChanged()"> Timing Candle</label>
         </div>
         <div id="timingConfig" class="grid" style="display:none;margin-bottom:10px"><div><label>Timing Candle Hour (IST)</label><input id="timingHour" type="number" min="0" max="23" value="9"></div><div><label>Timing Candle Minute (IST)</label><input id="timingMinute" type="number" min="0" max="59" value="30"></div><div><label>End Time (Optional)</label><input id="timingEndTime" type="time"></div></div>
@@ -264,7 +264,7 @@ button{padding:7px 11px;border:0;border-radius:6px;cursor:pointer;margin:6px 5px
         </div>
         <div class="combined-pnl">
           <div class="row"><span>Strategic P&L</span><b id="strategicPnl">0.00</b></div>
-          <div class="row"><span>Trap Candles P&L</span><b id="magicalPnl">0.00</b></div>
+          <div class="row"><span>Magical P&L</span><b id="magicalPnl">0.00</b></div>
           <div class="row"><span>Timing P&L</span><b id="timingPnl">0.00</b></div>
           <div class="row combined-total"><strong>Combined P&L</strong><strong id="combinedPnl">0.00</strong></div>
         </div>
@@ -291,7 +291,6 @@ button{padding:7px 11px;border:0;border-radius:6px;cursor:pointer;margin:6px 5px
           <div class="sig">TIMING BUY<b id="timingBuy">—</b></div>
           <div class="sig">TIMING SELL<b id="timingSell">—</b></div>
           <div class="sig">TRIGGERED<b id="triggered">—</b></div>
-          <div class="sig">STOP LOSS LEVEL<b id="l100">—</b></div>
           <div class="sig">CURRENT SL<b id="currentSl">—</b></div>
         </div>
       </div>
@@ -300,7 +299,7 @@ button{padding:7px 11px;border:0;border-radius:6px;cursor:pointer;margin:6px 5px
         <div class="section-title trade-log-header"><h2>Trade Logs</h2><div class="trade-log-actions"><span class="pill">Separated by strategy</span><button class="icon-btn" id="tradeLogToggle" onclick="toggleTradeLogs()" aria-label="Collapse trade logs" title="Collapse trade logs">▼</button></div></div>
         <div class="log-grid" id="tradeLogContent">
           <div class="log-card" id="strategicLogCard"><div class="section-title"><h2>Strategic Entry</h2><div class="log-card-actions"><span id="strategicLogPill" class="pill">P&L 0.00</span><button class="log-card-toggle" id="strategicLogToggle" onclick="toggleStrategyLog('strategic')" aria-label="Collapse Strategic Entry log" title="Collapse Strategic Entry log">▼</button></div></div><div id="strategicTradeLog" class="log"><div class="empty">No trades yet.</div></div></div>
-          <div class="log-card" id="magicalLogCard"><div class="section-title"><h2>Trap Candles</h2><div class="log-card-actions"><span id="magicalLogPill" class="pill">P&L 0.00</span><button class="log-card-toggle" id="magicalLogToggle" onclick="toggleStrategyLog('magical')" aria-label="Collapse Trap Candles log" title="Collapse Trap Candles log">▼</button></div></div><div id="magicalTradeLog" class="log"><div class="empty">No trades yet.</div></div></div>
+          <div class="log-card" id="magicalLogCard"><div class="section-title"><h2>Magical Entry</h2><div class="log-card-actions"><span id="magicalLogPill" class="pill">P&L 0.00</span><button class="log-card-toggle" id="magicalLogToggle" onclick="toggleStrategyLog('magical')" aria-label="Collapse Magical Entry log" title="Collapse Magical Entry log">▼</button></div></div><div id="magicalTradeLog" class="log"><div class="empty">No trades yet.</div></div></div>
           <div class="log-card" id="timingLogCard"><div class="section-title"><h2>Timing Candle</h2><div class="log-card-actions"><span id="timingLogPill" class="pill">P&L 0.00</span><button class="log-card-toggle" id="timingLogToggle" onclick="toggleStrategyLog('timing')" aria-label="Collapse Timing Candle log" title="Collapse Timing Candle log">▼</button></div></div><div id="timingTradeLog" class="log"><div class="empty">No trades yet.</div></div></div>
         </div>
       </div>
@@ -322,6 +321,7 @@ button{padding:7px 11px;border:0;border-radius:6px;cursor:pointer;margin:6px 5px
       <div><label>Daily Target (points)</label><select id="btDailyTarget"><option value="0">OFF</option><option value="5">5</option><option value="10">10</option><option value="15">15</option><option value="20">20</option><option value="30">30</option><option value="50">50</option></select></div>
       <div id="btTimingHourWrap" style="display:none"><label>Timing Hour (IST)</label><input id="btTimingHour" type="number" min="0" max="23" value="9"></div>
       <div id="btTimingMinuteWrap" style="display:none"><label>Timing Minute (IST)</label><input id="btTimingMinute" type="number" min="0" max="59" value="30"></div>
+      <div id="btTimingEndWrap" style="display:none"><label>Timing End Time (IST, Optional)</label><input id="btTimingEnd" type="time"></div>
     </div>
     <div class="quick-ranges"><span class="muted" style="padding:7px 3px">Quick:</span><button class="secondary" data-range="1" onclick="btRange(1,this)">Today</button><button class="secondary" data-range="3" onclick="btRange(3,this)">3 Days</button><button class="secondary" data-range="7" onclick="btRange(7,this)">1 Week</button><button class="secondary" data-range="30" onclick="btRange(30,this)">1 Month</button></div>
     <div class="actions"><button class="primary" id="runBacktestBtn" onclick="runStrategicBacktest()">RUN BACKTEST</button><button class="secondary" onclick="closeBacktest()">CLOSE</button></div>
@@ -346,7 +346,7 @@ function toggleTheme(){applyTheme(root.dataset.theme==="light"?"dark":"light")}
 applyTheme(localStorage.getItem("chandra-theme")||"dark");
 async function api(url,options={}){const r=await fetch(url,{credentials:"include",...options});if(!r.ok)throw new Error(await r.text());return r.json()}
 function strategies(){return [...document.querySelectorAll('input[name="strategy"]:checked')].map(e=>e.value)}
-function strategyLabel(s){return s==="strategic"?"Strategic Entry":s==="magical"?"Trap Candles":"Timing Candle"}
+function strategyLabel(s){return s==="strategic"?"Strategic Entry":s==="magical"?"Magical Entry":"Timing Candle"}
 function updateTimingConfig(){const on=strategies().includes("timing");document.getElementById("timingConfig").style.display=on?"grid":"none"}
 function strategyChanged(){
   // Strategy selection is a local UI choice. Do NOT call the backend here.
@@ -362,7 +362,7 @@ function setModeRadio(value){
 function openBacktest(){
   const today=new Date(); const iso=d=>d.toISOString().slice(0,10);
   if(!btFrom.value){btFrom.value=iso(new Date(today.getTime()-6*86400000));} if(!btTo.value){btTo.value=iso(today);} setBtRangeActive(7);
-  btLot.value=lot.value||"0.01"; btSymbol.value=symbol.value||"XAUUSD.sd"; btTimeframe.value=(timeframe.value||"M1").toUpperCase(); btStrategy.value="strategic"; btTimingHour.value=timingHour.value||9; btTimingMinute.value=timingMinute.value||30; updateBacktestStrategy(); backtestModal.classList.add("open");
+  btLot.value=lot.value||"0.01"; btSymbol.value=symbol.value||"XAUUSD.sd"; btTimeframe.value=(timeframe.value||"M1").toUpperCase(); btStrategy.value="strategic"; btTimingHour.value=timingHour.value||9; btTimingMinute.value=timingMinute.value||30; btTimingEnd.value=window.timingEndTime?.value||""; updateBacktestStrategy(); backtestModal.classList.add("open");
 }
 function closeBacktest(){backtestModal.classList.remove("open")}
 function setBtRangeActive(days){
@@ -385,7 +385,7 @@ function updateBacktestStrategy(){
   btTitle.textContent=(timing?"Timing Candle":"Strategic Entry")+" — Backtest";
   btDescription.textContent=timing?"09:30 IST timing candle • breakout close • later retest entry • timing candle High/Low stop loss":"Fib 3 Strategic Entry • Signal candle High/Low exit • ± 5 point safety protection";
   btTimeframe.value=timing?"M5":btTimeframe.value;
-  btTimingHourWrap.style.display=timing?"block":"none"; btTimingMinuteWrap.style.display=timing?"block":"none";
+  btTimingHourWrap.style.display=timing?"block":"none"; btTimingMinuteWrap.style.display=timing?"block":"none"; btTimingEndWrap.style.display=timing?"block":"none";
 }
 
 async function runStrategicBacktest(){
@@ -396,7 +396,7 @@ async function runStrategicBacktest(){
     const timing=btStrategy.value==="timing";
     const endpoint=timing?"/api/trading/backtest/timing":"/api/trading/backtest/strategic";
     const payload={from_date:btFrom.value,to_date:btTo.value,symbol:btSymbol.value.trim(),timeframe:btTimeframe.value,lot:Number(btLot.value),max_trades_per_day:maxTrades,daily_target_points:dailyTarget};
-    if(timing){payload.timing_hour=Number(btTimingHour.value);payload.timing_minute=Number(btTimingMinute.value);}
+    if(timing){payload.timing_hour=Number(btTimingHour.value);payload.timing_minute=Number(btTimingMinute.value);payload.timing_end_time=btTimingEnd.value||null;}
     const x=await api(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
     const rows=(x.trades_detail||[]).map((t,i)=>`<tr><td>${i+1}</td><td class="${t.side==='BUY'?'buy':'sell'}">${t.side}</td><td>${t.entry.toFixed(2)}</td><td>${t.initial_sl!=null?t.initial_sl.toFixed(2):"—"}</td><td>${t.reference!=null?t.reference.toFixed(2):"—"}</td><td>${t.exit.toFixed(2)}</td><td>${t.reason}</td><td class="${t.pnl>=0?'pnl-positive':'pnl-negative'}">${money(t.pnl)}</td></tr>`).join("");
     const dayRows=(x.daily_stats||[]).map(d=>`<tr><td>${d.date}</td><td>${d.trades}</td><td>${d.wins}</td><td>${d.losses}</td><td class="${d.pnl>=0?'pnl-positive':'pnl-negative'}">${money(d.pnl)}</td><td>${d.points.toFixed(2)}</td><td>${d.target_reached?'✓':'—'}</td></tr>`).join("");
@@ -430,7 +430,7 @@ function renderStrategyPanels(selected){
   if(!grid) return;
   const defs={
     strategic:{title:"Strategic Entry",close:"CLOSE STRATEGIC",extra:"",key:"strategic"},
-    magical:{title:"Trap Candles",close:"CLOSE MAGICAL",extra:"",key:"magical"},
+    magical:{title:"Magical Entry",close:"CLOSE MAGICAL",extra:"",key:"magical"},
     timing:{title:"Timing Candle",close:"CLOSE TIMING",extra:'<div class="kv"><span>Levels</span><b id="timingLevels">—</b></div>',key:"timing"}
   };
   grid.innerHTML=(selected||[]).map(name=>{
@@ -575,7 +575,7 @@ async function confirmLiveAction(message){if(mode()!=="live")return true;return 
 async function stopTrading(){try{await api("/api/trading/stop-trading",{method:"POST"});poll()}catch(e){status.textContent=e.message}}
 async function resumeTrading(){try{await api("/api/trading/resume-trading",{method:"POST"});poll()}catch(e){status.textContent=e.message}}
 async function closeStrategy(strategy){const label=strategyLabel(strategy);if(!window.confirm("Close "+label+" position?\n\nThis closes only the position owned by this strategy."))return;if(!(await confirmLiveAction("Close "+label+" now?")))return;try{await api("/api/trading/close/"+strategy,{method:"POST"});poll()}catch(e){status.textContent=e.message}}
-async function closeAllPositions(){if(!window.confirm("CLOSE ALL CHANDRA POSITIONS?\n\nThis closes Strategic Entry, Trap Candles and Timing Candle positions only."))return;if(!(await confirmLiveAction("Close ALL Chandra-managed positions now?")))return;try{await api("/api/trading/close-all",{method:"POST"});poll()}catch(e){status.textContent=e.message}}
+async function closeAllPositions(){if(!window.confirm("CLOSE ALL CHANDRA POSITIONS?\n\nThis closes Strategic Entry, Magical Entry and Timing Candle positions only."))return;if(!(await confirmLiveAction("Close ALL Chandra-managed positions now?")))return;try{await api("/api/trading/close-all",{method:"POST"});poll()}catch(e){status.textContent=e.message}}
 
 async function manualOrder(side){
   const lotValue=Number(document.getElementById("manualLot").value||lot.value||0.01);
@@ -649,7 +649,6 @@ async function poll(){try{const x=await api("/api/trading/status");
   trig.textContent=s.triggered||"—";
   trig.className=(s.triggered||"").includes("BUY")?"on":(s.triggered||"").includes("SELL")?"sell":"off";
 
-  document.getElementById("l100").textContent=s.l100!=null?Number(s.l100).toFixed(2):"—";
 
   const safety=document.getElementById("safetyStatus");
   const resume=document.getElementById("resumeBtn");
@@ -676,7 +675,7 @@ async function poll(){try{const x=await api("/api/trading/status");
   }
 
   renderMode(displayMode);
-  loadTrades();
+  await loadTrades();
 }catch(e){status.textContent=e.message}}
 function renderStrategyStatus(ss){
   for(const name of ["strategic","magical","timing"]){
@@ -711,7 +710,7 @@ function renderStrategyStatus(ss){
   document.getElementById("timingLevels").textContent=(tv.timing_high!=null&&tv.timing_low!=null)?`${Number(tv.timing_high).toFixed(2)} / ${Number(tv.timing_low).toFixed(2)}`:"—";
 }
 
-async function loadTrades(){try{const x=await api("/api/trading/trades");const groups={strategic:[],magical:[],timing:[]};(x.trades||[]).forEach(t=>{if(groups[t.strategy])groups[t.strategy].push(t)});renderTradeLog("strategic",groups.strategic);renderTradeLog("magical",groups.magical);renderTradeLog("timing",groups.timing);const sums={strategic:0,magical:0,timing:0};for(const t of x.trades||[]){if(t.pnl!=null&&sums[t.strategy]!=null)sums[t.strategy]+=Number(t.pnl)}document.getElementById("strategicPnl").textContent=sums.strategic.toFixed(2);document.getElementById("magicalPnl").textContent=sums.magical.toFixed(2);document.getElementById("combinedPnl").textContent=(Number(window.__combinedPnl||0)).toFixed(2);document.getElementById("strategicLogPill").textContent="P&L "+sums.strategic.toFixed(2);document.getElementById("magicalLogPill").textContent="P&L "+sums.magical.toFixed(2);document.getElementById("timingLogPill").textContent="P&L "+sums.timing.toFixed(2);document.getElementById("timingPnl").textContent=sums.timing.toFixed(2)}catch(e){}}
+async function loadTrades(){try{const x=await api(`/api/trading/trades?_=${Date.now()}`);const groups={strategic:[],magical:[],timing:[]};(x.trades||[]).forEach(t=>{if(groups[t.strategy])groups[t.strategy].push(t)});renderTradeLog("strategic",groups.strategic);renderTradeLog("magical",groups.magical);renderTradeLog("timing",groups.timing);const sums={strategic:0,magical:0,timing:0};for(const t of x.trades||[]){if(t.pnl!=null&&sums[t.strategy]!=null)sums[t.strategy]+=Number(t.pnl)}document.getElementById("strategicPnl").textContent=sums.strategic.toFixed(2);document.getElementById("magicalPnl").textContent=sums.magical.toFixed(2);document.getElementById("combinedPnl").textContent=(Number(window.__combinedPnl||0)).toFixed(2);document.getElementById("strategicLogPill").textContent="P&L "+sums.strategic.toFixed(2);document.getElementById("magicalLogPill").textContent="P&L "+sums.magical.toFixed(2);document.getElementById("timingLogPill").textContent="P&L "+sums.timing.toFixed(2);document.getElementById("timingPnl").textContent=sums.timing.toFixed(2)}catch(e){}}
 function renderTradeLog(strategyName,rows){
   const el=document.getElementById(strategyName+"TradeLog");
   if(!rows.length){el.innerHTML='<div class="empty">No trades yet.</div>';return}
@@ -735,7 +734,7 @@ function renderTradeLog(strategyName,rows){
     return `<div class="trade-row"><div class="trade-main"><b class="${side==='BUY'?'buy':'sell'}">${side}</b> • <span class="trade-flow"><span>Entry ${entry}</span><span class="trade-arrow" aria-hidden="true">→</span>${exitHtml}</span> • ${o.volume||c.volume||""} lot${pnl!=null?` • <b class="${pnl>=0?'pnl-positive':'pnl-negative'}">P&L ${pnl.toFixed(2)}</b>`:" • OPEN"}</div><div class="trade-sub">${o.time||c.time||""}${c.time?` → ${c.time}`:""} • ${reason}${c.sl!=null?` • SL ${Number(c.sl).toFixed(2)}`:""}</div></div>`;
   }).join("");
 }
-if(window.timingHour) timingHour.addEventListener("change",strategyChanged); if(window.timingMinute) timingMinute.addEventListener("change",strategyChanged); if(window.timingEndTime) timingEndTime.addEventListener("change",strategyChanged); if(window.btFrom) btFrom.addEventListener("change",clearBtRangeActive); if(window.btTo) btTo.addEventListener("change",clearBtRangeActive); document.querySelectorAll('input[name="strategy"]').forEach(e=>e.checked=false); renderStrategyPanels([]); renderMode(mode());setInterval(poll,1000);poll();testMT5();
+if(window.btTimingEnd) btTimingEnd.addEventListener("change",clearBtRangeActive); if(window.timingHour) timingHour.addEventListener("change",strategyChanged); if(window.timingMinute) timingMinute.addEventListener("change",strategyChanged); if(window.timingEndTime) timingEndTime.addEventListener("change",strategyChanged); if(window.btFrom) btFrom.addEventListener("change",clearBtRangeActive); if(window.btTo) btTo.addEventListener("change",clearBtRangeActive); document.querySelectorAll('input[name="strategy"]').forEach(e=>e.checked=false); renderStrategyPanels([]); renderMode(mode());setInterval(poll,1000);poll();testMT5();
 </script>
 </body>
 </html>
