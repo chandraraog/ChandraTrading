@@ -27,3 +27,15 @@ dist/
 # Generated releases
 release/*.exe
 release/*.zip
+
+# PyInstaller / generated builds
+build/
+dist/
+
+# Generated release files
+release/*.exe
+release/*.zip
+
+# Local license/runtime files
+release/license/
+release/data/
