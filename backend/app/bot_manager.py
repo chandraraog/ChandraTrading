@@ -58,6 +58,12 @@ class StrategyState:
     volume: float = 0.0
     active_trade_id: str | None = None
     live_ticket: str | None = None
+    # Kept for backward compatibility with older clients that displayed a
+    # Timing LIMIT order. Timing Candle now enters at market on a live touch.
+    timing_pending_ticket: str | None = None
+    timing_pending_side: str | None = None
+    timing_pending_price: float | None = None
+    timing_pending_sl: float | None = None
 
 @dataclass
 class BotState:
@@ -76,6 +82,7 @@ class BotState:
     mt5_symbol: str = "XAUUSD"
     timing_hour: int = 9
     timing_minute: int = 30
+    timing_end_time: str | None = None
     contract_size: float = 1.0
     trades: list = field(default_factory=list)
     strategy_states: dict = field(default_factory=dict)
@@ -123,7 +130,8 @@ class BotManager:
             self._reset_manual_state()
         return self.state.manual_state
 
-    def configure(self, strategies, symbol, timeframe, lot, mode, timing_hour=9, timing_minute=30):
+    def configure(self, strategies, symbol, timeframe, lot, mode, timing_hour=9,
+                  timing_minute=30, timing_end_time=None):
         if isinstance(strategies, str):
             strategies = [strategies]
         strategies = list(dict.fromkeys(strategies))
@@ -142,6 +150,7 @@ class BotManager:
         self.state.mode = mode
         self.state.timing_hour = int(timing_hour)
         self.state.timing_minute = int(timing_minute)
+        self.state.timing_end_time = timing_end_time or None
         self.state.entries_enabled = True
         self.state.safety_halt_reason = None
         self._reset_strategy_states()
@@ -337,6 +346,27 @@ class BotManager:
             self.state.trades = self.state.trades[:200]
             self._save_trade_history()
 
+    def _find_open_trade_by_ticket(self, ticket):
+        """Reuse an existing broker OPEN record after a runtime restart."""
+        if ticket is None:
+            return None
+        ticket = str(ticket)
+        with self._lock:
+            for item in self.state.trades:
+                if item.get("action") != "OPEN" or str(item.get("ticket") or "") != ticket:
+                    continue
+                trade_id = item.get("trade_id")
+                if not trade_id:
+                    continue
+                is_closed = any(
+                    row.get("action") == "CLOSE"
+                    and str(row.get("trade_id") or "") == str(trade_id)
+                    for row in self.state.trades
+                )
+                if not is_closed:
+                    return item
+        return None
+
     def _paper_open(self, ss: StrategyState, side, price, l100=None, sl_override=None, target_override=None):
         target = 1 if side == "BUY" else -1
         if ss.paper_position == target:
@@ -387,6 +417,30 @@ class BotManager:
             ss.execution.virtual_position = 0
             return True
         return False
+
+    def _place_timing_pending(self, ss: StrategyState, side: str, entry_price: float, sl: float):
+        """Compatibility hook: Timing retests use immediate market execution.
+
+        The name remains so older integrations do not assume a missing order
+        path. No pending broker order is created, avoiding stale LIMIT fills.
+        """
+        if side not in ("BUY", "SELL"):
+            return False
+        if self.live_enabled:
+            return core.open_position(
+                self.state.mt5_symbol, side, self.state.lot, True,
+                sl=float(sl), magic_number=ss.execution.magic_number,
+            )
+        self._paper_open(ss, side, float(entry_price), sl_override=float(sl))
+        ss.execution.virtual_position = 1 if side == "BUY" else -1
+        return True
+
+    def _sync_timing_pending(self, ss: StrategyState):
+        """Clear legacy pending-order display state; no LIMIT order is used."""
+        ss.timing_pending_ticket = None
+        ss.timing_pending_side = None
+        ss.timing_pending_price = None
+        ss.timing_pending_sl = None
 
     def _paper_check_target(self, ss: StrategyState):
         if ss.paper_position == 0 or ss.target is None or ss.paper_entry_price is None:
@@ -453,12 +507,17 @@ class BotManager:
             ss.live_ticket = str(getattr(p, "ticket", ""))
             ss.execution.virtual_position = 1 if side == "BUY" else -1
             if ss.strategy != "manual" and not ss.active_trade_id:
-                ss.active_trade_id = uuid.uuid4().hex
-                self._record(
-                    ss.strategy, side, "OPEN", ss.paper_entry_price, "LIVE",
-                    message="LIVE — POSITION RECOVERED", sl=ss.paper_sl, target=ss.target,
-                    volume=ss.volume or self.state.lot, trade_id=ss.active_trade_id, ticket=ss.live_ticket
-                )
+                existing = self._find_open_trade_by_ticket(ss.live_ticket)
+                if existing:
+                    # duplicate OPEN entry prevented during restart recovery
+                    ss.active_trade_id = str(existing["trade_id"])
+                else:
+                    ss.active_trade_id = uuid.uuid4().hex
+                    self._record(
+                        ss.strategy, side, "OPEN", ss.paper_entry_price, "LIVE",
+                        message="LIVE — POSITION RECOVERED", sl=ss.paper_sl, target=ss.target,
+                        volume=ss.volume or self.state.lot, trade_id=ss.active_trade_id, ticket=ss.live_ticket
+                    )
         else:
             ss.paper_position = 0
             ss.paper_entry_price = None
@@ -683,17 +742,9 @@ class BotManager:
         side = decision.side
         entry_price = ask if side == "BUY" else bid
         sl = ss.timing_low if side == "BUY" else ss.timing_high
-        if self.live_enabled:
-            ok = core.open_position(
-                self.state.mt5_symbol, side, self.state.lot, True,
-                sl=sl, magic_number=ss.execution.magic_number,
-            )
-            if not ok:
-                return None
-            ss.execution.virtual_position = 1 if side == "BUY" else -1
-        else:
-            ss.execution.virtual_position = 1 if side == "BUY" else -1
-            self._paper_open(ss, side, entry_price, sl_override=sl)
+        if not self._place_timing_pending(ss, side, entry_price, sl):
+            return None
+        ss.execution.virtual_position = 1 if side == "BUY" else -1
 
         # A setup is consumed only after the broker/paper entry succeeds.
         ss.timing_armed_buy = False
@@ -1093,7 +1144,7 @@ class BotManager:
                         max_trades_per_day: int = 0, daily_target_points: float = 0.0,
                         symbol: str | None = None, timeframe: str | None = None,
                         timing_hour: int = 9, timing_minute: int = 30,
-                        end_time: str = "08:00"):
+                        timing_end_time: str = "08:00"):
         """Backtest Timing Candle with optional daily end time and diagnostics.
 
         Timing Candle is evaluated in India time.  The optional ``end_time``
@@ -1103,6 +1154,7 @@ class BotManager:
         if not (0 <= int(timing_hour) <= 23 and 0 <= int(timing_minute) <= 59):
             raise ValueError("Invalid timing candle time")
 
+        end_time = timing_end_time
         if end_time is not None:
             try:
                 end_hour, end_minute = [int(x) for x in str(end_time).strip().split(":", 1)]
