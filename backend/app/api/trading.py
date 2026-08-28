@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Optional, List, Dict
 from backend.app.bot_manager import manager
 
 router=APIRouter(prefix="/api/trading", tags=["trading"])
@@ -14,6 +14,7 @@ class ConfigIn(BaseModel):
     timing_hour: int=4
     timing_minute: int=0
     timing_end_time: Optional[str]="08:00"
+    strategy_target_points: Dict[str, Optional[float]]={}
 class BacktestIn(BaseModel):
     from_date: str; to_date: str; symbol: str="XAUUSD"; timeframe: str="M1"; lot: float=0.01
     max_trades_per_day: int=0; daily_target_points: float=0.0; timing_hour: int=4; timing_minute: int=0; timing_end_time: Optional[str]=None

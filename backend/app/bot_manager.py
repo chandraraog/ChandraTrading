@@ -64,6 +64,9 @@ class StrategyState:
     timing_pending_side: str | None = None
     timing_pending_price: float | None = None
     timing_pending_sl: float | None = None
+    session_target_points: float | None = None
+    session_realized_points: float = 0.0
+    session_target_reached: bool = False
 
 @dataclass
 class BotState:
@@ -83,6 +86,7 @@ class BotState:
     timing_hour: int = 9
     timing_minute: int = 30
     timing_end_time: str | None = None
+    strategy_target_points: dict = field(default_factory=dict)
     contract_size: float = 1.0
     trades: list = field(default_factory=list)
     strategy_states: dict = field(default_factory=dict)
@@ -113,6 +117,7 @@ class BotManager:
                     magic_number=MAGIC_BY_STRATEGY[name],
                     entries_enabled=self.state.entries_enabled,
                 ),
+                session_target_points=self.state.strategy_target_points.get(name),
             )
 
     def _reset_manual_state(self):
@@ -131,7 +136,7 @@ class BotManager:
         return self.state.manual_state
 
     def configure(self, strategies, symbol, timeframe, lot, mode, timing_hour=9,
-                  timing_minute=30, timing_end_time=None):
+                  timing_minute=30, timing_end_time=None, strategy_target_points=None):
         if isinstance(strategies, str):
             strategies = [strategies]
         strategies = list(dict.fromkeys(strategies))
@@ -141,6 +146,21 @@ class BotManager:
             raise ValueError("Invalid trading mode")
         if not (0 <= int(timing_hour) <= 23 and 0 <= int(timing_minute) <= 59):
             raise ValueError("Invalid timing candle time")
+        target_points = strategy_target_points or {}
+        if not isinstance(target_points, dict):
+            raise ValueError("Strategy target points must be a map")
+        unknown_targets = set(target_points) - set(STRATEGIES)
+        if unknown_targets:
+            raise ValueError("Invalid strategy target")
+        normalized_targets = {}
+        for name in strategies:
+            value = target_points.get(name)
+            if value is None or value == "":
+                normalized_targets[name] = None
+            elif float(value) > 0:
+                normalized_targets[name] = float(value)
+            else:
+                raise ValueError("Target points must be greater than zero or left blank")
         if self.state.running:
             raise RuntimeError("Stop the bot before changing configuration")
         self.state.strategies = strategies
@@ -151,6 +171,7 @@ class BotManager:
         self.state.timing_hour = int(timing_hour)
         self.state.timing_minute = int(timing_minute)
         self.state.timing_end_time = timing_end_time or None
+        self.state.strategy_target_points = normalized_targets
         self.state.entries_enabled = True
         self.state.safety_halt_reason = None
         self._reset_strategy_states()
@@ -280,6 +301,9 @@ class BotManager:
         self.state.running = True
         self.state.entries_enabled = True
         self.state.safety_halt_reason = None
+        for ss in self.state.strategy_states.values():
+            ss.session_realized_points = 0.0
+            ss.session_target_reached = False
         self._reset_strategy_states()
         self._restore_realized_pnl()
         if self._manual_state().paper_position == 0:
@@ -333,9 +357,28 @@ class BotManager:
         except Exception:
             pass
 
+    def _mt5_chart_log_time(self):
+        """Return a timestamp in the same clock shown by the MT5 chart."""
+        try:
+            rates = core.mt5.copy_rates_from_pos(
+                self.state.mt5_symbol,
+                core.timeframe_to_mt5(self.state.timeframe),
+                0,
+                1,
+            )
+            if rates is not None and len(rates):
+                # MT5's rate timestamp is the chart candle's timestamp.  Keep
+                # it naive instead of applying a computer/IST conversion.
+                return pd.to_datetime(int(rates[-1]["time"]), unit="s").to_pydatetime().isoformat(
+                    timespec="seconds"
+                )
+        except Exception:
+            pass
+        return datetime.now().isoformat(timespec="seconds")
+
     def _record(self, strategy, side, action, price, status, pnl=None, message="", sl=None, target=None, volume=None, trade_id=None, ticket=None):
         rec = TradeRecord(
-            datetime.now().isoformat(timespec="seconds"), strategy, side, action,
+            self._mt5_chart_log_time(), strategy, side, action,
             float(price), float(volume if volume is not None else self.state.lot), self.state.mode, status, pnl, message, sl, target
         )
         item = rec.__dict__.copy()
@@ -381,7 +424,7 @@ class BotManager:
         ss.paper_sl = sl_override if sl_override is not None else self._paper_sl_from_l100(side, l100)
         ss.target = target_override
         ss.volume = float(self.state.lot)
-        ss.open_trade_time = datetime.now().isoformat(timespec="seconds")
+        ss.open_trade_time = self._mt5_chart_log_time()
         self._record(ss.strategy, side, "OPEN", price, "SIMULATED", message="PAPER — NOT SENT TO BROKER", sl=ss.paper_sl, target=ss.target, trade_id=ss.active_trade_id)
 
     def _paper_close(self, ss: StrategyState, price, reason="EXIT"):
@@ -390,6 +433,8 @@ class BotManager:
         entry = ss.paper_entry_price
         side = ss.paper_entry_side
         pnl = ((price - entry) if side == "BUY" else (entry - price)) * (ss.volume or self.state.lot) * self.state.contract_size
+        if ss.strategy in STRATEGIES:
+            ss.session_realized_points += (price - entry) if side == "BUY" else (entry - price)
         ss.realized_pnl += pnl
         ss.current_pnl = 0.0
         self._record(ss.strategy, side, "CLOSE", price, "SIMULATED", pnl=pnl,
@@ -477,10 +522,15 @@ class BotManager:
             exit_deal = max(exits, key=lambda d: getattr(d, "time_msc", getattr(d, "time", 0)))
             pnl = sum(float(getattr(d, "profit", 0.0) or 0.0) for d in exits)
             price = float(getattr(exit_deal, "price", 0.0) or 0.0)
+            side = ss.paper_entry_side or ("BUY" if ss.paper_position == 1 else "SELL")
+            if ss.strategy in STRATEGIES and ss.paper_entry_price is not None:
+                ss.session_realized_points += (
+                    (price - ss.paper_entry_price) if side == "BUY" else (ss.paper_entry_price - price)
+                )
             comment = str(getattr(exit_deal, "comment", "") or "").strip()
             reason = comment or "BROKER EXIT"
             self._record(
-                ss.strategy, ss.paper_entry_side or ("BUY" if ss.paper_position == 1 else "SELL"),
+                ss.strategy, side,
                 "CLOSE", price, "LIVE", pnl=pnl,
                 message=f"LIVE — {reason}", sl=ss.paper_sl, target=ss.target,
                 volume=ss.volume or self.state.lot, trade_id=ss.active_trade_id, ticket=ticket
@@ -578,7 +628,7 @@ class BotManager:
             ss.paper_sl = sl
             ss.target = target
             ss.volume = float(lot)
-            ss.open_trade_time = datetime.now().isoformat(timespec="seconds")
+            ss.open_trade_time = self._mt5_chart_log_time()
             ss.execution.virtual_position = ss.paper_position
             self._record("manual", side, "OPEN", price, "SIMULATED", message="MANUAL PAPER ORDER — NOT SENT TO BROKER", sl=sl, target=target, volume=lot, trade_id=ss.active_trade_id)
         return {"ok": True, "side": side, "price": ss.paper_entry_price or price, "sl": ss.paper_sl, "target": ss.target, "mode": self.state.mode}
@@ -635,13 +685,46 @@ class BotManager:
                 return
         ss.current_pnl = ((current - ss.paper_entry_price) if ss.paper_position == 1 else (ss.paper_entry_price - current)) * (ss.volume or self.state.lot) * self.state.contract_size
 
+    def _strategy_open_points(self, ss: StrategyState):
+        """Return floating points for one bot strategy (manual is excluded)."""
+        tick = core.mt5.symbol_info_tick(self.state.mt5_symbol)
+        if tick is None:
+            return 0.0
+        bid = float(getattr(tick, "bid", 0.0) or 0.0)
+        ask = float(getattr(tick, "ask", 0.0) or 0.0)
+        if ss.paper_position == 1 and ss.paper_entry_price is not None and bid > 0:
+            return bid - ss.paper_entry_price
+        if ss.paper_position == -1 and ss.paper_entry_price is not None and ask > 0:
+            return ss.paper_entry_price - ask
+        return 0.0
+
+    def _enforce_strategy_targets(self):
+        """Close only the strategy whose optional session target is met."""
+        reached = False
+        for name, ss in self.state.strategy_states.items():
+            target = ss.session_target_points
+            net_points = ss.session_realized_points + self._strategy_open_points(ss)
+            if target is None or ss.session_target_reached or net_points < target:
+                continue
+            # Disable this strategy before closing to prevent a race with a
+            # fresh signal; other strategies continue normally.
+            ss.session_target_reached = True
+            ss.execution.entries_enabled = False
+            self.close_strategy(name)
+            reached = True
+        return reached
+
     def _timing_local_dt(self, value):
-        """Interpret MT5 candle timestamps as UTC and convert to India time."""
+        """Use the timestamp shown by the MT5 chart for Timing Candle rules.
+
+        MT5 rates arrive as naive datetimes whose clock already matches the
+        chart. Treating them as UTC and adding +05:30 selects the wrong candle.
+        """
         if isinstance(value, pd.Timestamp):
             value = value.to_pydatetime()
         if value.tzinfo is None:
-            value = value.replace(tzinfo=timezone.utc)
-        return value.astimezone(ZoneInfo("Asia/Kolkata"))
+            return value
+        return value.astimezone(ZoneInfo("Asia/Kolkata")).replace(tzinfo=None)
 
     def _timing_reset_if_needed(self, ss: StrategyState, local_dt):
         day = local_dt.date().isoformat()
@@ -674,11 +757,13 @@ class BotManager:
 
         try:
             bar_minutes = core.timeframe_minutes(self.state.timeframe)
+            # Ask for a broad window because MT5 history requests use UTC
+            # while the matching below deliberately uses the chart clock.
             rates = core.get_rates_range(
                 self.state.mt5_symbol,
                 self.state.timeframe,
-                timing_dt.astimezone(timezone.utc),
-                (timing_dt + timedelta(minutes=bar_minutes)).astimezone(timezone.utc),
+                (timing_dt - timedelta(days=1)).replace(tzinfo=timezone.utc),
+                (timing_dt + timedelta(days=1, minutes=bar_minutes)).replace(tzinfo=timezone.utc),
             )
         except Exception:
             # A temporary history failure must not prevent normal processing;
@@ -938,6 +1023,7 @@ class BotManager:
                         self.state.last_signal["timing_low"] = tss.timing_low
                     self.state.last_signal["triggered"] = " • ".join(triggered) if triggered else None
                     last_bar = bar_time
+                self._enforce_strategy_targets()
                 time.sleep(1.0)
         except Exception as exc:
             self.state.error = str(exc)
@@ -1560,6 +1646,10 @@ class BotManager:
                 "timing_low": ss.timing_low,
                 "timing_armed_buy": ss.timing_armed_buy,
                 "timing_armed_sell": ss.timing_armed_sell,
+                "session_target_points": ss.session_target_points,
+                "session_realized_points": ss.session_realized_points,
+                "session_open_points": self._strategy_open_points(ss),
+                "session_target_reached": ss.session_target_reached,
             }
         manual = self._manual_state()
         strategy_status["manual"] = {

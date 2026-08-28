@@ -225,7 +225,8 @@ button{padding:7px 11px;border:0;border-radius:6px;cursor:pointer;margin:6px 5px
           <label><input type="checkbox" name="strategy" value="magical" onchange="strategyChanged()"> Trap Candles</label>
           <label><input type="checkbox" name="strategy" value="timing" onchange="strategyChanged()"> Timing Candle</label>
         </div>
-        <div id="timingConfig" class="grid" style="display:none;margin-bottom:10px"><div><label>Timing Candle Hour (IST)</label><input id="timingHour" type="number" min="0" max="23" value="9"></div><div><label>Timing Candle Minute (IST)</label><input id="timingMinute" type="number" min="0" max="59" value="30"></div><div><label>End Time (Optional)</label><input id="timingEndTime" type="time"></div></div>
+        <div id="timingConfig" class="grid" style="display:none;margin-bottom:10px"><div><label>Timing Candle Hour (MT5 Chart)</label><input id="timingHour" type="number" min="0" max="23" value="9"></div><div><label>Timing Candle Minute (MT5 Chart)</label><input id="timingMinute" type="number" min="0" max="59" value="30"></div><div><label>End Time (Optional)</label><input id="timingEndTime" type="time"></div></div>
+        <div id="strategyTargetConfig" class="grid" style="margin-bottom:10px"><div id="strategicTargetWrap"><label>Strategic Target Points (Optional)</label><input id="strategicTargetPoints" type="number" min="0" step="0.01" placeholder="Continue without target"></div><div id="magicalTargetWrap"><label>Trap Candle Target Points (Optional)</label><input id="magicalTargetPoints" type="number" min="0" step="0.01" placeholder="Continue without target"></div><div id="timingTargetWrap"><label>Timing Candle Target Points (Optional)</label><input id="timingTargetPoints" type="number" min="0" step="0.01" placeholder="Continue without target"></div></div>
         <div class="actions">
           <button class="primary" onclick="configure()">Save Configuration</button>
           <button class="primary" onclick="startBot()">START BOT</button>
@@ -297,7 +298,7 @@ button{padding:7px 11px;border:0;border-radius:6px;cursor:pointer;margin:6px 5px
       </div>
 
       <div class="card trade-log-section" id="tradeLogSection">
-        <div class="section-title trade-log-header"><h2>Trade Logs</h2><div class="trade-log-actions"><span class="pill">Separated by strategy</span><button class="icon-btn" id="tradeLogToggle" onclick="toggleTradeLogs()" aria-label="Collapse trade logs" title="Collapse trade logs">▼</button></div></div>
+        <div class="section-title trade-log-header"><h2>Trade Logs</h2><div class="trade-log-actions"><span class="pill">MT5 chart time</span><span class="pill">Separated by strategy</span><button class="icon-btn" id="tradeLogToggle" onclick="toggleTradeLogs()" aria-label="Collapse trade logs" title="Collapse trade logs">▼</button></div></div>
         <div class="log-grid" id="tradeLogContent">
           <div class="log-card" id="strategicLogCard"><div class="section-title"><h2>Strategic Entry</h2><div class="log-card-actions"><span id="strategicLogPill" class="pill">P&L 0.00</span><button class="log-card-toggle" id="strategicLogToggle" onclick="toggleStrategyLog('strategic')" aria-label="Collapse Strategic Entry log" title="Collapse Strategic Entry log">▼</button></div></div><div id="strategicTradeLog" class="log"><div class="empty">No trades yet.</div></div></div>
           <div class="log-card" id="magicalLogCard"><div class="section-title"><h2>Trap Candles</h2><div class="log-card-actions"><span id="magicalLogPill" class="pill">P&L 0.00</span><button class="log-card-toggle" id="magicalLogToggle" onclick="toggleStrategyLog('magical')" aria-label="Collapse Trap Candles log" title="Collapse Trap Candles log">▼</button></div></div><div id="magicalTradeLog" class="log"><div class="empty">No trades yet.</div></div></div>
@@ -320,8 +321,8 @@ button{padding:7px 11px;border:0;border-radius:6px;cursor:pointer;margin:6px 5px
       <div><label>Lot Size</label><input id="btLot" type="number" min="0.01" step="0.01" value="0.01"></div>
       <div><label>Max Trades / Day</label><select id="btMaxTrades"><option value="0">Unlimited</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="5">5</option><option value="10">10</option></select></div>
       <div><label>Daily Target (points)</label><select id="btDailyTarget"><option value="0">OFF</option><option value="5">5</option><option value="10">10</option><option value="15">15</option><option value="20">20</option><option value="30">30</option><option value="50">50</option></select></div>
-      <div id="btTimingHourWrap" style="display:none"><label>Timing Hour (IST)</label><input id="btTimingHour" type="number" min="0" max="23" value="9"></div>
-      <div id="btTimingMinuteWrap" style="display:none"><label>Timing Minute (IST)</label><input id="btTimingMinute" type="number" min="0" max="59" value="30"></div>
+      <div id="btTimingHourWrap" style="display:none"><label>Timing Hour (MT5 Chart)</label><input id="btTimingHour" type="number" min="0" max="23" value="9"></div>
+      <div id="btTimingMinuteWrap" style="display:none"><label>Timing Minute (MT5 Chart)</label><input id="btTimingMinute" type="number" min="0" max="59" value="30"></div>
     </div>
     <div class="quick-ranges"><span class="muted" style="padding:7px 3px">Quick:</span><button class="secondary" data-range="1" onclick="btRange(1,this)">Today</button><button class="secondary" data-range="3" onclick="btRange(3,this)">3 Days</button><button class="secondary" data-range="7" onclick="btRange(7,this)">1 Week</button><button class="secondary" data-range="30" onclick="btRange(30,this)">1 Month</button></div>
     <div class="actions"><button class="primary" id="runBacktestBtn" onclick="runStrategicBacktest()">RUN BACKTEST</button><button class="secondary" onclick="closeBacktest()">CLOSE</button></div>
@@ -348,11 +349,13 @@ async function api(url,options={}){const r=await fetch(url,{credentials:"include
 function strategies(){return [...document.querySelectorAll('input[name="strategy"]:checked')].map(e=>e.value)}
 function strategyLabel(s){return s==="strategic"?"Strategic Entry":s==="magical"?"Trap Candles":"Timing Candle"}
 function updateTimingConfig(){const on=strategies().includes("timing");document.getElementById("timingConfig").style.display=on?"grid":"none"}
+function updateStrategyTargetConfig(){const active=new Set(strategies());["strategic","magical","timing"].forEach(name=>{const wrap=document.getElementById(name+"TargetWrap");if(wrap)wrap.style.display=active.has(name)?"block":"none"})}
 function strategyChanged(){
   // Strategy selection is a local UI choice. Do NOT call the backend here.
   // The backend is updated only by Save Configuration / START BOT.
   renderMode(mode());
   renderStrategyPanels(strategies());
+  updateStrategyTargetConfig();
 }
 function mode(){return document.querySelector('input[name="mode"]:checked').value}
 function setModeRadio(value){
@@ -383,7 +386,7 @@ function money(v){const n=Number(v||0);return (n>=0?"+":"")+n.toFixed(2)}
 function updateBacktestStrategy(){
   const timing=btStrategy.value==="timing";
   btTitle.textContent=(timing?"Timing Candle":"Strategic Entry")+" — Backtest";
-  btDescription.textContent=timing?"09:30 IST timing candle • breakout close • later retest entry • timing candle High/Low stop loss":"Fib 3 Strategic Entry • Signal candle High/Low exit • ± 5 point safety protection";
+  btDescription.textContent=timing?"MT5 chart-time candle • breakout close • later retest entry • timing candle High/Low stop loss":"Fib 3 Strategic Entry • Signal candle High/Low exit • ± 5 point safety protection";
   btTimeframe.value=timing?"M5":btTimeframe.value;
   btTimingHourWrap.style.display=timing?"block":"none"; btTimingMinuteWrap.style.display=timing?"block":"none";
 }
@@ -401,7 +404,7 @@ async function runStrategicBacktest(){
     const rows=(x.trades_detail||[]).map((t,i)=>`<tr><td>${i+1}</td><td class="${t.side==='BUY'?'buy':'sell'}">${t.side}</td><td>${t.entry.toFixed(2)}</td><td>${t.initial_sl!=null?t.initial_sl.toFixed(2):"—"}</td><td>${t.reference!=null?t.reference.toFixed(2):"—"}</td><td>${t.exit.toFixed(2)}</td><td>${t.reason}</td><td class="${t.pnl>=0?'pnl-positive':'pnl-negative'}">${money(t.pnl)}</td></tr>`).join("");
     const dayRows=(x.daily_stats||[]).map(d=>`<tr><td>${d.date}</td><td>${d.trades}</td><td>${d.wins}</td><td>${d.losses}</td><td class="${d.pnl>=0?'pnl-positive':'pnl-negative'}">${money(d.pnl)}</td><td>${d.points.toFixed(2)}</td><td>${d.target_reached?'✓':'—'}</td></tr>`).join("");
     const controls=`Max trades/day: ${x.max_trades_per_day>0?x.max_trades_per_day:'Unlimited'} • Daily target: ${x.daily_target_points>0?x.daily_target_points+' points':'OFF'}`;
-    out.innerHTML=`<div class="muted" style="margin-bottom:8px">${x.from} → ${x.to} • ${x.symbol} • ${x.timeframe} • ${x.candles} closed candles<br>${controls}<br><span class="muted">${timing?`Timing candle ${String(x.timing_hour).padStart(2,'0')}:${String(x.timing_minute).padStart(2,'0')} IST • breakout close then later retest • SL = timing candle High/Low`:`Normal exit: opposite signal candle High/Low + later close • Safety protection: ± 5 points`}</span></div><div class="backtest-metrics"><div class="bt-metric"><span>TRADES</span><b>${x.trades}</b></div><div class="bt-metric"><span>WIN RATE</span><b>${x.win_rate.toFixed(2)}%</b></div><div class="bt-metric"><span>BUY / SELL</span><b>${x.buy_trades} / ${x.sell_trades}</b></div><div class="bt-metric"><span>NET P&L</span><b class="${x.net_pnl>=0?'pnl-positive':'pnl-negative'}">${money(x.net_pnl)}</b></div><div class="bt-metric"><span>WINS</span><b>${x.wins}</b></div><div class="bt-metric"><span>LOSSES</span><b>${x.losses}</b></div><div class="bt-metric"><span>MAX DRAWDOWN</span><b>${x.max_drawdown.toFixed(2)}</b></div><div class="bt-metric"><span>PROFITABLE / LOSING DAYS</span><b>${x.profitable_days} / ${x.losing_days}</b></div></div>${dayRows?`<div style="overflow:auto"><table class="backtest-table"><thead><tr><th>Date</th><th>Trades</th><th>Wins</th><th>Losses</th><th>P&L</th><th>Points</th><th>Target</th></tr></thead><tbody>${dayRows}</tbody></table></div>`:''}${rows?`<div style="overflow:auto;max-height:300px"><table class="backtest-table"><thead><tr><th>#</th><th>Side</th><th>Entry</th><th>Safety SL</th><th>Signal Ref</th><th>Exit</th><th>Reason</th><th>P&L</th></tr></thead><tbody>${rows}</tbody></table></div>`:'<div class="empty">No Strategic trades in this range.</div>'}`;
+    out.innerHTML=`<div class="muted" style="margin-bottom:8px">${x.from} → ${x.to} • ${x.symbol} • ${x.timeframe} • ${x.candles} closed candles<br>${controls}<br><span class="muted">${timing?`Timing candle ${String(x.timing_hour).padStart(2,'0')}:${String(x.timing_minute).padStart(2,'0')} MT5 chart time • breakout close then later retest • SL = timing candle High/Low`:`Normal exit: opposite signal candle High/Low + later close • Safety protection: ± 5 points`}</span></div><div class="backtest-metrics"><div class="bt-metric"><span>TRADES</span><b>${x.trades}</b></div><div class="bt-metric"><span>WIN RATE</span><b>${x.win_rate.toFixed(2)}%</b></div><div class="bt-metric"><span>BUY / SELL</span><b>${x.buy_trades} / ${x.sell_trades}</b></div><div class="bt-metric"><span>NET P&L</span><b class="${x.net_pnl>=0?'pnl-positive':'pnl-negative'}">${money(x.net_pnl)}</b></div><div class="bt-metric"><span>WINS</span><b>${x.wins}</b></div><div class="bt-metric"><span>LOSSES</span><b>${x.losses}</b></div><div class="bt-metric"><span>MAX DRAWDOWN</span><b>${x.max_drawdown.toFixed(2)}</b></div><div class="bt-metric"><span>PROFITABLE / LOSING DAYS</span><b>${x.profitable_days} / ${x.losing_days}</b></div></div>${dayRows?`<div style="overflow:auto"><table class="backtest-table"><thead><tr><th>Date</th><th>Trades</th><th>Wins</th><th>Losses</th><th>P&L</th><th>Points</th><th>Target</th></tr></thead><tbody>${dayRows}</tbody></table></div>`:''}${rows?`<div style="overflow:auto;max-height:300px"><table class="backtest-table"><thead><tr><th>#</th><th>Side</th><th>Entry</th><th>Safety SL</th><th>Signal Ref</th><th>Exit</th><th>Reason</th><th>P&L</th></tr></thead><tbody>${rows}</tbody></table></div>`:'<div class="empty">No Strategic trades in this range.</div>'}`;
   }catch(e){msg.textContent=e.message.replace(/^Error:\s*/,'')}finally{btn.disabled=false;btn.textContent="RUN BACKTEST"}
 }
 
@@ -422,7 +425,10 @@ function applyServerConfig(x){
   if(x.timing_hour!=null) timingHour.value=x.timing_hour;
   if(x.timing_minute!=null) timingMinute.value=x.timing_minute;
   if(timingEndTime) timingEndTime.value=x.timing_end_time||"";
+  const targets=x.strategy_target_points||{};
+  ["strategic","magical","timing"].forEach(name=>{const input=document.getElementById(name+"TargetPoints");if(input)input.value=targets[name]??""});
   renderStrategyPanels(serverStrategies);
+  updateStrategyTargetConfig();
 }
 
 function renderStrategyPanels(selected){
@@ -436,7 +442,7 @@ function renderStrategyPanels(selected){
   grid.innerHTML=(selected||[]).map(name=>{
     const d=defs[name];
     if(!d) return "";
-    return `<div class="strategy-card" data-strategy-panel="${d.key}"><h3>${d.title}</h3><div class="kv"><span>Position</span><b id="${d.key}Position">FLAT</b></div><div class="kv"><span>Entry</span><b id="${d.key}Entry">—</b></div><div class="kv"><span>Current SL</span><b id="${d.key}Sl">—</b></div><div class="kv"><span>P&L</span><b id="${d.key}CurrentPnl">0.00</b></div>${d.extra}<button class="danger small" onclick="closeStrategy('${d.key}')">${d.close}</button></div>`;
+    return `<div class="strategy-card" data-strategy-panel="${d.key}"><h3>${d.title}</h3><div class="kv"><span>Position</span><b id="${d.key}Position">FLAT</b></div><div class="kv"><span>Entry</span><b id="${d.key}Entry">—</b></div><div class="kv"><span>Current SL</span><b id="${d.key}Sl">—</b></div><div class="kv"><span>P&L</span><b id="${d.key}CurrentPnl">0.00</b></div><div class="kv"><span>Points</span><b id="${d.key}TargetPointsStatus">OFF</b></div>${d.extra}<button class="danger small" onclick="closeStrategy('${d.key}')">${d.close}</button></div>`;
   }).join("");
   grid.style.display=(selected&&selected.length)?"grid":"none";
 }
@@ -506,7 +512,8 @@ async function configure(){
   renderMode(mode());
   renderStrategyPanels(selected);
   try{
-    await api("/api/trading/configure",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({strategies:selected,symbol:symbol.value,timeframe:timeframe.value,lot:Number(lot.value),mode:mode(),timing_hour:Number(timingHour.value),timing_minute:Number(timingMinute.value),timing_end_time:(timingEndTime.value||null)})});
+    const pointTarget=id=>document.getElementById(id).value===""?null:Number(document.getElementById(id).value);
+    await api("/api/trading/configure",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({strategies:selected,symbol:symbol.value,timeframe:timeframe.value,lot:Number(lot.value),mode:mode(),timing_hour:Number(timingHour.value),timing_minute:Number(timingMinute.value),timing_end_time:(timingEndTime.value||null),strategy_target_points:{strategic:pointTarget("strategicTargetPoints"),magical:pointTarget("magicalTargetPoints"),timing:pointTarget("timingTargetPoints")}})});
     status.textContent=selected.length?"Configuration saved successfully.":"Configuration saved. No strategy selected.";
     return true;
   }catch(e){
@@ -694,6 +701,13 @@ function renderStrategyStatus(ss){
       p.textContent=pnl.toFixed(2); p.className=pnl>0?"pnl-positive":pnl<0?"pnl-negative":"";
       const top=document.getElementById(name+"Pnl");
       if(top){top.textContent=pnl.toFixed(2);top.className=pnl>0?"pnl-positive":pnl<0?"pnl-negative":"";}
+      const target=document.getElementById(name+"TargetPointsStatus");
+      if(target){
+        const goal=v.session_target_points;
+        const net=Number(v.session_realized_points||0)+Number(v.session_open_points||0);
+        target.textContent=goal!=null?`${net.toFixed(2)} / ${Number(goal).toFixed(2)}`:"OFF";
+        target.className=v.session_target_reached?"pnl-positive":"";
+      }
     }
   }
   const mv=ss.manual||{};
