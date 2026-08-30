@@ -19,7 +19,7 @@ STRATEGIES = ("strategic", "magical", "timing")
 MAGIC_BY_STRATEGY = {"strategic": 26081201, "magical": 26081202, "timing": 26081203, "manual": 26081204}
 ENGINE_MODE = {"strategic": "buy_sell", "magical": "magical", "timing": "timing"}
 DISPLAY_NAME = {"strategic": "Strategic Entry", "magical": "Magical Entry", "timing": "Timing Candle"}
-HISTORY_FILE = Path(__file__).resolve().parents[3] / "data" / "trade_history.json"
+HISTORY_FILE = Path(__file__).resolve().parents[2] / "data" / "trade_history.json"
 
 @dataclass
 class TradeRecord:
@@ -58,6 +58,9 @@ class StrategyState:
     volume: float = 0.0
     active_trade_id: str | None = None
     live_ticket: str | None = None
+    # Preserve the open details while MT5 publishes the broker exit deal.
+    # History can lag positions_get() by one or more polling cycles.
+    live_exit_pending: dict | None = None
     # Kept for backward compatibility with older clients that displayed a
     # Timing LIMIT order. Timing Candle now enters at market on a live touch.
     timing_pending_ticket: str | None = None
@@ -510,8 +513,13 @@ class BotManager:
 
     def _record_live_close(self, ss: StrategyState):
         """Record a broker-side exit (SL/TP/manual) after a live position disappears."""
-        ticket = ss.live_ticket
-        if not ticket or not ss.active_trade_id:
+        pending = ss.live_exit_pending or {}
+        ticket = pending.get("ticket") or ss.live_ticket
+        trade_id = pending.get("trade_id") or ss.active_trade_id
+        if ticket and not trade_id:
+            existing = self._find_open_trade_by_ticket(ticket)
+            trade_id = existing.get("trade_id") if existing else None
+        if not ticket or not trade_id:
             return False
         try:
             deals = core.mt5.history_deals_get(position=int(ticket)) or []
@@ -522,28 +530,33 @@ class BotManager:
             exit_deal = max(exits, key=lambda d: getattr(d, "time_msc", getattr(d, "time", 0)))
             pnl = sum(float(getattr(d, "profit", 0.0) or 0.0) for d in exits)
             price = float(getattr(exit_deal, "price", 0.0) or 0.0)
-            side = ss.paper_entry_side or ("BUY" if ss.paper_position == 1 else "SELL")
-            if ss.strategy in STRATEGIES and ss.paper_entry_price is not None:
+            side = pending.get("side") or ss.paper_entry_side or ("BUY" if ss.paper_position == 1 else "SELL")
+            entry_price = pending.get("entry_price", ss.paper_entry_price)
+            sl = pending.get("sl", ss.paper_sl)
+            target = pending.get("target", ss.target)
+            volume = pending.get("volume", ss.volume) or self.state.lot
+            if ss.strategy in STRATEGIES and entry_price is not None:
                 ss.session_realized_points += (
-                    (price - ss.paper_entry_price) if side == "BUY" else (ss.paper_entry_price - price)
+                    (price - entry_price) if side == "BUY" else (entry_price - price)
                 )
             comment = str(getattr(exit_deal, "comment", "") or "").strip()
             reason = comment or "BROKER EXIT"
             self._record(
                 ss.strategy, side,
                 "CLOSE", price, "LIVE", pnl=pnl,
-                message=f"LIVE — {reason}", sl=ss.paper_sl, target=ss.target,
-                volume=ss.volume or self.state.lot, trade_id=ss.active_trade_id, ticket=ticket
+                message=f"LIVE — {reason}", sl=sl, target=target,
+                volume=volume, trade_id=trade_id, ticket=ticket
             )
             ss.realized_pnl += pnl
             ss.active_trade_id = None
             ss.live_ticket = None
+            ss.live_exit_pending = None
             return True
         except Exception:
             return False
 
-    def _sync_live_snapshot(self, ss: StrategyState):
-        positions = self._live_positions(ss.execution.magic_number)
+    def _sync_live_snapshot(self, ss: StrategyState, positions=None):
+        positions = self._live_positions(ss.execution.magic_number) if positions is None else positions
         if positions:
             p = positions[0]
             side = "BUY" if p.type == core.mt5.POSITION_TYPE_BUY else "SELL"
@@ -579,6 +592,29 @@ class BotManager:
             # A broker-side SL/TP/manual exit ends the position only.  The
             # next completed BO/BD may arm a fresh setup.
             ss.execution.virtual_position = 0
+
+    def _reconcile_live_snapshot(self, ss: StrategyState):
+        """Refresh one strategy from MT5 and retain broker-side exits in the log.
+
+        A stop loss is executed by MT5, not by our order code.  Therefore the
+        position can disappear between candles; detect that on every polling
+        cycle and record the close *before* the snapshot clears its entry and
+        stop-loss details.
+        """
+        positions = self._live_positions(ss.execution.magic_number)
+        if not positions and ss.live_ticket:
+            if ss.live_exit_pending is None:
+                ss.live_exit_pending = {
+                    "ticket": ss.live_ticket,
+                    "trade_id": ss.active_trade_id,
+                    "side": ss.paper_entry_side,
+                    "entry_price": ss.paper_entry_price,
+                    "sl": ss.paper_sl,
+                    "target": ss.target,
+                    "volume": ss.volume,
+                }
+            self._record_live_close(ss)
+        self._sync_live_snapshot(ss, positions)
 
     def manual_order(self, side: str, lot: float, sl: float | None = None, target: float | None = None):
         side = side.upper()
@@ -883,7 +919,11 @@ class BotManager:
             while not self._stop.is_set():
                 manual_ss = self._manual_state()
                 if self.live_enabled:
-                    self._sync_live_snapshot(manual_ss)
+                    # Keep every UI position in step with broker-side SL/TP
+                    # executions.  This cannot wait for the next candle.
+                    self._reconcile_live_snapshot(manual_ss)
+                    for ss in self.state.strategy_states.values():
+                        self._reconcile_live_snapshot(ss)
                 else:
                     self._update_manual_paper()
                 if self.live_enabled:

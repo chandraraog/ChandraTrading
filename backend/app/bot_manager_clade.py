@@ -1,4 +1,4 @@
-﻿import json
+import json
 import pandas as pd
 import threading
 import time
@@ -9,6 +9,7 @@ from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 from backend.app.engine.chandra_trend_engine import ChandraTrendEngine
 from backend.app.engine import chandra_core as core
+from backend.app.strategies.timing_candle import breakout_arm, retest_signal
 
 # Website V1 enables the engine's L100-based initial/trailing SL.
 core.STOPLOSS_CONFIG["enabled"] = True
@@ -18,8 +19,7 @@ STRATEGIES = ("strategic", "magical", "timing")
 MAGIC_BY_STRATEGY = {"strategic": 26081201, "magical": 26081202, "timing": 26081203, "manual": 26081204}
 ENGINE_MODE = {"strategic": "buy_sell", "magical": "magical", "timing": "timing"}
 DISPLAY_NAME = {"strategic": "Strategic Entry", "magical": "Magical Entry", "timing": "Timing Candle"}
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-HISTORY_FILE = PROJECT_ROOT / "data" / "trade_history.json"
+HISTORY_FILE = Path(__file__).resolve().parents[2] / "data" / "trade_history.json"
 
 @dataclass
 class TradeRecord:
@@ -54,18 +54,19 @@ class StrategyState:
     timing_armed_buy: bool = False
     timing_armed_sell: bool = False
     timing_arm_time: str | None = None
-    # After SL, the previous BO/BD is invalid. Wait for a future completed BO/BD.
-    timing_waiting_fresh_breakout: bool = False
-    timing_sl_bar_time: str | None = None
     target: float | None = None
     volume: float = 0.0
     active_trade_id: str | None = None
     live_ticket: str | None = None
-    # Timing Candle pending LIMIT runtime state
+    # Kept for backward compatibility with older clients that displayed a
+    # Timing LIMIT order. Timing Candle now enters at market on a live touch.
     timing_pending_ticket: str | None = None
     timing_pending_side: str | None = None
     timing_pending_price: float | None = None
     timing_pending_sl: float | None = None
+    session_target_points: float | None = None
+    session_realized_points: float = 0.0
+    session_target_reached: bool = False
 
 @dataclass
 class BotState:
@@ -82,8 +83,10 @@ class BotState:
     mt5_connected: bool = False
     account: dict = field(default_factory=dict)
     mt5_symbol: str = "XAUUSD"
-    timing_hour: int = 7
-    timing_minute: int = 0
+    timing_hour: int = 9
+    timing_minute: int = 30
+    timing_end_time: str | None = None
+    strategy_target_points: dict = field(default_factory=dict)
     contract_size: float = 1.0
     trades: list = field(default_factory=list)
     strategy_states: dict = field(default_factory=dict)
@@ -114,6 +117,7 @@ class BotManager:
                     magic_number=MAGIC_BY_STRATEGY[name],
                     entries_enabled=self.state.entries_enabled,
                 ),
+                session_target_points=self.state.strategy_target_points.get(name),
             )
 
     def _reset_manual_state(self):
@@ -131,18 +135,32 @@ class BotManager:
             self._reset_manual_state()
         return self.state.manual_state
 
-    def configure(self, strategies, symbol, timeframe, lot, mode, timing_hour=7, timing_minute=0, timing_end_time=None):
+    def configure(self, strategies, symbol, timeframe, lot, mode, timing_hour=9,
+                  timing_minute=30, timing_end_time=None, strategy_target_points=None):
         if isinstance(strategies, str):
             strategies = [strategies]
         strategies = list(dict.fromkeys(strategies))
-        # Empty strategy selection is a valid SAVED configuration.
-        # The bot itself must still have at least one strategy before START.
-        if any(s not in STRATEGIES for s in strategies):
-            raise ValueError("Invalid strategy selection")
+        if not strategies or any(s not in STRATEGIES for s in strategies):
+            raise ValueError("Select at least one valid strategy")
         if mode not in ("paper", "live"):
             raise ValueError("Invalid trading mode")
         if not (0 <= int(timing_hour) <= 23 and 0 <= int(timing_minute) <= 59):
             raise ValueError("Invalid timing candle time")
+        target_points = strategy_target_points or {}
+        if not isinstance(target_points, dict):
+            raise ValueError("Strategy target points must be a map")
+        unknown_targets = set(target_points) - set(STRATEGIES)
+        if unknown_targets:
+            raise ValueError("Invalid strategy target")
+        normalized_targets = {}
+        for name in strategies:
+            value = target_points.get(name)
+            if value is None or value == "":
+                normalized_targets[name] = None
+            elif float(value) > 0:
+                normalized_targets[name] = float(value)
+            else:
+                raise ValueError("Target points must be greater than zero or left blank")
         if self.state.running:
             raise RuntimeError("Stop the bot before changing configuration")
         self.state.strategies = strategies
@@ -152,20 +170,8 @@ class BotManager:
         self.state.mode = mode
         self.state.timing_hour = int(timing_hour)
         self.state.timing_minute = int(timing_minute)
-
-        # Optional end time is part of the application configuration contract.
-        # Store it in BotState so the API/UI can round-trip it safely.
-        end_value = (str(timing_end_time).strip() if timing_end_time is not None else "") or None
-        if end_value is not None:
-            try:
-                eh, em = [int(x) for x in end_value.split(":", 1)]
-                if not (0 <= eh <= 23 and 0 <= em <= 59):
-                    raise ValueError
-                end_value = f"{eh:02d}:{em:02d}"
-            except Exception as exc:
-                raise ValueError("Invalid Timing Candle end time. Use HH:MM.") from exc
-        self.state.timing_end_time = end_value
-
+        self.state.timing_end_time = timing_end_time or None
+        self.state.strategy_target_points = normalized_targets
         self.state.entries_enabled = True
         self.state.safety_halt_reason = None
         self._reset_strategy_states()
@@ -287,8 +293,6 @@ class BotManager:
     def start(self):
         if self.state.running:
             raise RuntimeError("Engine is already running")
-        if not self.state.strategies:
-            raise RuntimeError("Select at least one strategy before starting the bot")
         result = self.mt5_test()
         if not result.get("connected"):
             raise RuntimeError(result.get("error", "MT5 connection failed"))
@@ -297,6 +301,9 @@ class BotManager:
         self.state.running = True
         self.state.entries_enabled = True
         self.state.safety_halt_reason = None
+        for ss in self.state.strategy_states.values():
+            ss.session_realized_points = 0.0
+            ss.session_target_reached = False
         self._reset_strategy_states()
         self._restore_realized_pnl()
         if self._manual_state().paper_position == 0:
@@ -306,11 +313,6 @@ class BotManager:
         self._thread.start()
 
     def stop(self):
-        # Cancel any broker-side Timing LIMIT before stopping the engine so an
-        # unmanaged pending order cannot execute after the bot is stopped.
-        ss = self.state.strategy_states.get("timing")
-        if ss is not None and ss.timing_pending_ticket:
-            self._cancel_timing_pending(ss, "BOT STOP")
         self._stop.set()
         self.state.running = False
 
@@ -345,30 +347,38 @@ class BotManager:
                 data = json.loads(HISTORY_FILE.read_text(encoding="utf-8"))
                 if isinstance(data, list):
                     self.state.trades = data[:200]
-        except Exception as exc:
-            # Never let a corrupted/unreadable history file stop the bot.
-            # Keep the in-memory history empty, but make the problem visible.
+        except Exception:
             self.state.trades = []
-            print(f"TRADE HISTORY LOAD ERROR | file={HISTORY_FILE} | error={exc}", flush=True)
 
     def _save_trade_history(self):
-        # Persist trade history under this application/project, not the parent
-        # website directory.  Write atomically so the UI never reads a partial JSON file.
         try:
             HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
-            tmp_file = HISTORY_FILE.with_suffix(HISTORY_FILE.suffix + ".tmp")
-            payload = json.dumps(self.state.trades[:200], indent=2, ensure_ascii=False)
-            tmp_file.write_text(payload, encoding="utf-8")
-            tmp_file.replace(HISTORY_FILE)
-            print(f"TRADE HISTORY SAVED | file={HISTORY_FILE} | records={len(self.state.trades[:200])}", flush=True)
-            return True
-        except Exception as exc:
-            print(f"TRADE HISTORY SAVE ERROR | file={HISTORY_FILE} | error={exc}", flush=True)
-            return False
+            HISTORY_FILE.write_text(json.dumps(self.state.trades[:200], indent=2), encoding="utf-8")
+        except Exception:
+            pass
+
+    def _mt5_chart_log_time(self):
+        """Return a timestamp in the same clock shown by the MT5 chart."""
+        try:
+            rates = core.mt5.copy_rates_from_pos(
+                self.state.mt5_symbol,
+                core.timeframe_to_mt5(self.state.timeframe),
+                0,
+                1,
+            )
+            if rates is not None and len(rates):
+                # MT5's rate timestamp is the chart candle's timestamp.  Keep
+                # it naive instead of applying a computer/IST conversion.
+                return pd.to_datetime(int(rates[-1]["time"]), unit="s").to_pydatetime().isoformat(
+                    timespec="seconds"
+                )
+        except Exception:
+            pass
+        return datetime.now().isoformat(timespec="seconds")
 
     def _record(self, strategy, side, action, price, status, pnl=None, message="", sl=None, target=None, volume=None, trade_id=None, ticket=None):
         rec = TradeRecord(
-            datetime.now().isoformat(timespec="seconds"), strategy, side, action,
+            self._mt5_chart_log_time(), strategy, side, action,
             float(price), float(volume if volume is not None else self.state.lot), self.state.mode, status, pnl, message, sl, target
         )
         item = rec.__dict__.copy()
@@ -378,6 +388,27 @@ class BotManager:
             self.state.trades.insert(0, item)
             self.state.trades = self.state.trades[:200]
             self._save_trade_history()
+
+    def _find_open_trade_by_ticket(self, ticket):
+        """Reuse an existing broker OPEN record after a runtime restart."""
+        if ticket is None:
+            return None
+        ticket = str(ticket)
+        with self._lock:
+            for item in self.state.trades:
+                if item.get("action") != "OPEN" or str(item.get("ticket") or "") != ticket:
+                    continue
+                trade_id = item.get("trade_id")
+                if not trade_id:
+                    continue
+                is_closed = any(
+                    row.get("action") == "CLOSE"
+                    and str(row.get("trade_id") or "") == str(trade_id)
+                    for row in self.state.trades
+                )
+                if not is_closed:
+                    return item
+        return None
 
     def _paper_open(self, ss: StrategyState, side, price, l100=None, sl_override=None, target_override=None):
         target = 1 if side == "BUY" else -1
@@ -393,7 +424,7 @@ class BotManager:
         ss.paper_sl = sl_override if sl_override is not None else self._paper_sl_from_l100(side, l100)
         ss.target = target_override
         ss.volume = float(self.state.lot)
-        ss.open_trade_time = datetime.now().isoformat(timespec="seconds")
+        ss.open_trade_time = self._mt5_chart_log_time()
         self._record(ss.strategy, side, "OPEN", price, "SIMULATED", message="PAPER — NOT SENT TO BROKER", sl=ss.paper_sl, target=ss.target, trade_id=ss.active_trade_id)
 
     def _paper_close(self, ss: StrategyState, price, reason="EXIT"):
@@ -402,6 +433,8 @@ class BotManager:
         entry = ss.paper_entry_price
         side = ss.paper_entry_side
         pnl = ((price - entry) if side == "BUY" else (entry - price)) * (ss.volume or self.state.lot) * self.state.contract_size
+        if ss.strategy in STRATEGIES:
+            ss.session_realized_points += (price - entry) if side == "BUY" else (entry - price)
         ss.realized_pnl += pnl
         ss.current_pnl = 0.0
         self._record(ss.strategy, side, "CLOSE", price, "SIMULATED", pnl=pnl,
@@ -423,24 +456,36 @@ class BotManager:
         if ss.paper_position == 1 and low <= ss.paper_sl:
             self._paper_close(ss, ss.paper_sl, "SL HIT")
             ss.execution.virtual_position = 0
-            if ss.strategy == "timing":
-                ss.timing_armed_buy = False
-                ss.timing_armed_sell = False
-                ss.timing_arm_time = None
-                ss.timing_waiting_fresh_breakout = True
-                ss.timing_sl_bar_time = str(row["time"])
             return True
         if ss.paper_position == -1 and high >= ss.paper_sl:
             self._paper_close(ss, ss.paper_sl, "SL HIT")
             ss.execution.virtual_position = 0
-            if ss.strategy == "timing":
-                ss.timing_armed_buy = False
-                ss.timing_armed_sell = False
-                ss.timing_arm_time = None
-                ss.timing_waiting_fresh_breakout = True
-                ss.timing_sl_bar_time = str(row["time"])
             return True
         return False
+
+    def _place_timing_pending(self, ss: StrategyState, side: str, entry_price: float, sl: float):
+        """Compatibility hook: Timing retests use immediate market execution.
+
+        The name remains so older integrations do not assume a missing order
+        path. No pending broker order is created, avoiding stale LIMIT fills.
+        """
+        if side not in ("BUY", "SELL"):
+            return False
+        if self.live_enabled:
+            return core.open_position(
+                self.state.mt5_symbol, side, self.state.lot, True,
+                sl=float(sl), magic_number=ss.execution.magic_number,
+            )
+        self._paper_open(ss, side, float(entry_price), sl_override=float(sl))
+        ss.execution.virtual_position = 1 if side == "BUY" else -1
+        return True
+
+    def _sync_timing_pending(self, ss: StrategyState):
+        """Clear legacy pending-order display state; no LIMIT order is used."""
+        ss.timing_pending_ticket = None
+        ss.timing_pending_side = None
+        ss.timing_pending_price = None
+        ss.timing_pending_sl = None
 
     def _paper_check_target(self, ss: StrategyState):
         if ss.paper_position == 0 or ss.target is None or ss.paper_entry_price is None:
@@ -477,10 +522,15 @@ class BotManager:
             exit_deal = max(exits, key=lambda d: getattr(d, "time_msc", getattr(d, "time", 0)))
             pnl = sum(float(getattr(d, "profit", 0.0) or 0.0) for d in exits)
             price = float(getattr(exit_deal, "price", 0.0) or 0.0)
+            side = ss.paper_entry_side or ("BUY" if ss.paper_position == 1 else "SELL")
+            if ss.strategy in STRATEGIES and ss.paper_entry_price is not None:
+                ss.session_realized_points += (
+                    (price - ss.paper_entry_price) if side == "BUY" else (ss.paper_entry_price - price)
+                )
             comment = str(getattr(exit_deal, "comment", "") or "").strip()
             reason = comment or "BROKER EXIT"
             self._record(
-                ss.strategy, ss.paper_entry_side or ("BUY" if ss.paper_position == 1 else "SELL"),
+                ss.strategy, side,
                 "CLOSE", price, "LIVE", pnl=pnl,
                 message=f"LIVE — {reason}", sl=ss.paper_sl, target=ss.target,
                 volume=ss.volume or self.state.lot, trade_id=ss.active_trade_id, ticket=ticket
@@ -488,106 +538,9 @@ class BotManager:
             ss.realized_pnl += pnl
             ss.active_trade_id = None
             ss.live_ticket = None
-            if ss.strategy == "timing":
-                ss.timing_armed_buy = False
-                ss.timing_armed_sell = False
-                ss.timing_arm_time = None
-                ss.timing_waiting_fresh_breakout = True
-                ss.timing_sl_bar_time = None
             return True
         except Exception:
             return False
-
-    def _find_open_trade_by_ticket(self, ticket):
-        """Return an existing persisted OPEN trade for a broker ticket."""
-        if ticket is None:
-            return None
-        ticket = str(ticket)
-        with self._lock:
-            for item in self.state.trades:
-                if item.get("action") != "OPEN":
-                    continue
-                if str(item.get("ticket") or "") != ticket:
-                    continue
-                trade_id = item.get("trade_id")
-                if not trade_id:
-                    continue
-                closed = any(
-                    x.get("action") == "CLOSE"
-                    and str(x.get("trade_id") or "") == str(trade_id)
-                    for x in self.state.trades
-                )
-                if not closed:
-                    return item
-        return None
-
-    def _sync_timing_pending(self, ss: StrategyState):
-        """Synchronize a Timing Candle pending broker order with MT5.
-
-        This is intentionally defensive: if the broker-side pending order no
-        longer exists, clear the local pending state. If the order still
-        exists, keep its ticket/side/price/SL state synchronized where the
-        MT5 object exposes those fields.
-        """
-        if ss.strategy != "timing" or not ss.timing_pending_ticket:
-            return False
-
-        ticket = str(ss.timing_pending_ticket)
-        try:
-            orders_get = getattr(core.mt5, "orders_get", None)
-            if orders_get is None:
-                return False
-
-            orders = orders_get(ticket=int(ticket)) or []
-            if not orders:
-                ss.timing_pending_ticket = None
-                ss.timing_pending_side = None
-                ss.timing_pending_price = None
-                ss.timing_pending_sl = None
-                return False
-
-            order = orders[0]
-            ss.timing_pending_ticket = str(getattr(order, "ticket", ticket))
-            order_type = getattr(order, "type", None)
-            if order_type in (
-                getattr(core.mt5, "ORDER_TYPE_BUY_LIMIT", -1),
-                getattr(core.mt5, "ORDER_TYPE_BUY_STOP", -1),
-            ):
-                ss.timing_pending_side = "BUY"
-            elif order_type in (
-                getattr(core.mt5, "ORDER_TYPE_SELL_LIMIT", -1),
-                getattr(core.mt5, "ORDER_TYPE_SELL_STOP", -1),
-            ):
-                ss.timing_pending_side = "SELL"
-
-            price = getattr(order, "price_open", getattr(order, "price", None))
-            if price is not None:
-                ss.timing_pending_price = float(price)
-
-            order_sl = getattr(order, "sl", None)
-            if order_sl is not None and float(order_sl or 0) > 0:
-                ss.timing_pending_sl = float(order_sl)
-
-            return True
-        except Exception:
-            # Pending synchronization must never stop the trading loop.
-            return False
-
-    def _cancel_timing_pending(self, ss: StrategyState, reason="BOT STOP"):
-        """Cancel an outstanding Timing Candle pending LIMIT order safely."""
-        ticket = ss.timing_pending_ticket
-        if not ticket:
-            return False
-        try:
-            ok = core.cancel_pending_order(ticket, self.live_enabled) if hasattr(core, "cancel_pending_order") else False
-            if ok:
-                print(f"TIMING PENDING CANCELLED | ticket={ticket} | reason={reason}", flush=True)
-            return bool(ok)
-        finally:
-            ss.timing_pending_ticket = None
-            ss.timing_pending_side = None
-            ss.timing_pending_price = None
-            ss.timing_pending_sl = None
 
     def _sync_live_snapshot(self, ss: StrategyState):
         positions = self._live_positions(ss.execution.magic_number)
@@ -602,26 +555,12 @@ class BotManager:
             ss.volume = float(getattr(p, "volume", 0.0) or 0.0)
             ss.current_pnl = float(getattr(p, "profit", 0.0) or 0.0)
             ss.live_ticket = str(getattr(p, "ticket", ""))
-            # Keep execution state synchronized with the broker position.
-            # This allows Timing Candle to re-enter after a broker-side SL.
             ss.execution.virtual_position = 1 if side == "BUY" else -1
             if ss.strategy != "manual" and not ss.active_trade_id:
-                # A Timing LIMIT may have filled. The pending order ticket is no
-                # longer the active order once MT5 exposes the position.
-                if ss.strategy == "timing" and ss.timing_pending_ticket:
-                    ss.timing_pending_ticket = None
-                    ss.timing_pending_side = None
-                    ss.timing_pending_price = None
-                    ss.timing_pending_sl = None
-
-                # Restart-safe recovery: reuse an existing OPEN record for the
-                # same broker ticket instead of creating a duplicate OPEN.
                 existing = self._find_open_trade_by_ticket(ss.live_ticket)
                 if existing:
-                    # Restart recovery: reuse the persisted OPEN trade.
-                    # This prevents a duplicate OPEN entry in the trade log.
-                    print("duplicate OPEN entry prevented | ticket=" + str(ss.live_ticket), flush=True)
-                    ss.active_trade_id = str(existing.get("trade_id"))
+                    # duplicate OPEN entry prevented during restart recovery
+                    ss.active_trade_id = str(existing["trade_id"])
                 else:
                     ss.active_trade_id = uuid.uuid4().hex
                     self._record(
@@ -637,8 +576,8 @@ class BotManager:
             ss.target = None
             ss.volume = 0.0
             ss.current_pnl = 0.0
-            # A broker-side SL/TP/manual close only ends the current trade.
-            # It must NOT disable the strategy or its future BO/BD entries.
+            # A broker-side SL/TP/manual exit ends the position only.  The
+            # next completed BO/BD may arm a fresh setup.
             ss.execution.virtual_position = 0
 
     def manual_order(self, side: str, lot: float, sl: float | None = None, target: float | None = None):
@@ -689,7 +628,7 @@ class BotManager:
             ss.paper_sl = sl
             ss.target = target
             ss.volume = float(lot)
-            ss.open_trade_time = datetime.now().isoformat(timespec="seconds")
+            ss.open_trade_time = self._mt5_chart_log_time()
             ss.execution.virtual_position = ss.paper_position
             self._record("manual", side, "OPEN", price, "SIMULATED", message="MANUAL PAPER ORDER — NOT SENT TO BROKER", sl=sl, target=target, volume=lot, trade_id=ss.active_trade_id)
         return {"ok": True, "side": side, "price": ss.paper_entry_price or price, "sl": ss.paper_sl, "target": ss.target, "mode": self.state.mode}
@@ -746,17 +685,45 @@ class BotManager:
                 return
         ss.current_pnl = ((current - ss.paper_entry_price) if ss.paper_position == 1 else (ss.paper_entry_price - current)) * (ss.volume or self.state.lot) * self.state.contract_size
 
+    def _strategy_open_points(self, ss: StrategyState):
+        """Return floating points for one bot strategy (manual is excluded)."""
+        tick = core.mt5.symbol_info_tick(self.state.mt5_symbol)
+        if tick is None:
+            return 0.0
+        bid = float(getattr(tick, "bid", 0.0) or 0.0)
+        ask = float(getattr(tick, "ask", 0.0) or 0.0)
+        if ss.paper_position == 1 and ss.paper_entry_price is not None and bid > 0:
+            return bid - ss.paper_entry_price
+        if ss.paper_position == -1 and ss.paper_entry_price is not None and ask > 0:
+            return ss.paper_entry_price - ask
+        return 0.0
+
+    def _enforce_strategy_targets(self):
+        """Close only the strategy whose optional session target is met."""
+        reached = False
+        for name, ss in self.state.strategy_states.items():
+            target = ss.session_target_points
+            net_points = ss.session_realized_points + self._strategy_open_points(ss)
+            if target is None or ss.session_target_reached or net_points < target:
+                continue
+            # Disable this strategy before closing to prevent a race with a
+            # fresh signal; other strategies continue normally.
+            ss.session_target_reached = True
+            ss.execution.entries_enabled = False
+            self.close_strategy(name)
+            reached = True
+        return reached
+
     def _timing_local_dt(self, value):
-        """Return the candle timestamp in the project's IST market clock."""
+        """Use the timestamp shown by the MT5 chart for Timing Candle rules.
+
+        MT5 rates arrive as naive datetimes whose clock already matches the
+        chart. Treating them as UTC and adding +05:30 selects the wrong candle.
+        """
         if isinstance(value, pd.Timestamp):
             value = value.to_pydatetime()
-
-        # In this application the engine's naive candle timestamps are already
-        # the market-clock timestamps used for TradingView/IST comparison.
-        # Do NOT interpret them as UTC and add another +5:30 shift.
         if value.tzinfo is None:
             return value
-
         return value.astimezone(ZoneInfo("Asia/Kolkata")).replace(tzinfo=None)
 
     def _timing_reset_if_needed(self, ss: StrategyState, local_dt):
@@ -768,28 +735,118 @@ class BotManager:
             ss.timing_armed_buy = False
             ss.timing_armed_sell = False
             ss.timing_arm_time = None
-            ss.timing_waiting_fresh_breakout = False
-            ss.timing_sl_bar_time = None
+
+    def _restore_timing_levels(self, ss: StrategyState, local_dt):
+        """Restore today's completed timing candle when the bot starts late.
+
+        The normal loop only sees the newest completed bar.  Consequently, a
+        bot started after the configured time must explicitly read that day's
+        historical timing bar before it can look for BO/BD.
+        """
+        if ss.timing_high is not None or ss.timing_low is not None:
+            return
+
+        timing_dt = local_dt.replace(
+            hour=self.state.timing_hour,
+            minute=self.state.timing_minute,
+            second=0,
+            microsecond=0,
+        )
+        if local_dt < timing_dt:
+            return
+
+        try:
+            bar_minutes = core.timeframe_minutes(self.state.timeframe)
+            # Ask for a broad window because MT5 history requests use UTC
+            # while the matching below deliberately uses the chart clock.
+            rates = core.get_rates_range(
+                self.state.mt5_symbol,
+                self.state.timeframe,
+                (timing_dt - timedelta(days=1)).replace(tzinfo=timezone.utc),
+                (timing_dt + timedelta(days=1, minutes=bar_minutes)).replace(tzinfo=timezone.utc),
+            )
+        except Exception:
+            # A temporary history failure must not prevent normal processing;
+            # the next completed candle will retry this recovery.
+            return
+
+        if rates is None or rates.empty:
+            return
+        matches = rates[
+            rates["time"].map(
+                lambda value: (
+                    self._timing_local_dt(value).date() == timing_dt.date()
+                    and self._timing_local_dt(value).hour == timing_dt.hour
+                    and self._timing_local_dt(value).minute == timing_dt.minute
+                )
+            )
+        ]
+        if matches.empty:
+            return
+
+        timing_row = matches.iloc[-1]
+        ss.timing_high = float(timing_row["high"])
+        ss.timing_low = float(timing_row["low"])
+        ss.timing_armed_buy = False
+        ss.timing_armed_sell = False
+        ss.timing_arm_time = None
+
+    def _process_timing_retest_tick(self, ss: StrategyState, live_row=None):
+        """Enter immediately when a future live price retests an armed level."""
+        if (
+            ss.strategy != "timing"
+            or ss.execution.virtual_position != 0
+            or not self.state.entries_enabled
+            or not ss.execution.entries_enabled
+            or not (ss.timing_armed_buy or ss.timing_armed_sell)
+        ):
+            return None
+
+        tick = core.mt5.symbol_info_tick(self.state.mt5_symbol)
+        if tick is None:
+            return None
+        bid = float(getattr(tick, "bid", 0.0) or 0.0)
+        ask = float(getattr(tick, "ask", 0.0) or 0.0)
+        if bid <= 0 or ask <= 0:
+            return None
+
+        decision = retest_signal(
+            armed_buy=ss.timing_armed_buy,
+            armed_sell=ss.timing_armed_sell,
+            timing_high=ss.timing_high,
+            timing_low=ss.timing_low,
+            bar_key=None,
+            arm_time=ss.timing_arm_time,
+            live_bar_key=str(live_row["time"]) if live_row is not None else None,
+            bid=bid,
+            ask=ask,
+        )
+        if decision is None:
+            return None
+
+        side = decision.side
+        entry_price = ask if side == "BUY" else bid
+        sl = ss.timing_low if side == "BUY" else ss.timing_high
+        if not self._place_timing_pending(ss, side, entry_price, sl):
+            return None
+        ss.execution.virtual_position = 1 if side == "BUY" else -1
+
+        # A setup is consumed only after the broker/paper entry succeeds.
+        ss.timing_armed_buy = False
+        ss.timing_armed_sell = False
+        return f"{DISPLAY_NAME['timing']}: {side}"
 
     def _process_timing_candle(self, ss: StrategyState, row):
-        """Process the MT5-time Timing Candle strategy. The 07:00 MT5 candle maps to the user's 09:30 IST TradingView candle."""
+        """Process the configurable India-time timing-candle strategy."""
         local_dt = self._timing_local_dt(row["time"])
         self._timing_reset_if_needed(ss, local_dt)
         close = float(row["close"]); high = float(row["high"]); low = float(row["low"])
-        # IMPORTANT: Timing Candle uses the MT5 broker candle clock.
-        # For this feed, TradingView 09:30 IST corresponds to MT5 07:00.
-        # The 07:00-07:05 candle is therefore the reference candle; because
-        # _run processes completed candles, its OHLC is fixed before use.
         is_timing = local_dt.hour == self.state.timing_hour and local_dt.minute == self.state.timing_minute
         bar_key = str(row["time"])
         triggered = None
 
         # The timing candle itself only establishes the reference levels.
         if is_timing:
-            print(
-                f"TIMING CANDLE FOUND | MT5 {local_dt.strftime('%Y-%m-%d %H:%M:%S')} | "
-                f"O={float(row['open']):.3f} H={high:.3f} L={low:.3f} C={close:.3f}"
-            )
             ss.timing_high = high
             ss.timing_low = low
             ss.timing_armed_buy = False
@@ -797,206 +854,26 @@ class BotManager:
             ss.timing_arm_time = None
             return None
 
+        self._restore_timing_levels(ss, local_dt)
         if ss.timing_high is None or ss.timing_low is None:
             return None
 
-        # After SL, the old BO/BD is dead. Only a FUTURE COMPLETED candle
-        # whose CLOSE is beyond the Timing range can create a new setup.
-        if ss.timing_waiting_fresh_breakout:
-            if ss.timing_sl_bar_time is not None and bar_key == ss.timing_sl_bar_time:
-                return None
-            if close > ss.timing_high:
-                ss.timing_armed_buy = True
-                ss.timing_armed_sell = False
-                ss.timing_arm_time = bar_key
-                ss.timing_waiting_fresh_breakout = False
-                return None
-            if close < ss.timing_low:
-                ss.timing_armed_buy = False
-                ss.timing_armed_sell = True
-                ss.timing_arm_time = bar_key
-                ss.timing_waiting_fresh_breakout = False
-                return None
-            return None
+        arm = breakout_arm(
+            close=close,
+            timing_high=ss.timing_high,
+            timing_low=ss.timing_low,
+            bar_key=bar_key,
+            already_armed_buy=ss.timing_armed_buy,
+            already_armed_sell=ss.timing_armed_sell,
+            position_flat=ss.execution.virtual_position == 0,
+            entries_enabled=self.state.entries_enabled and ss.execution.entries_enabled,
+        )
+        if arm is not None:
+            ss.timing_armed_buy = arm.side == "BUY"
+            ss.timing_armed_sell = arm.side == "SELL"
+            ss.timing_arm_time = bar_key
 
-        # Closed candle breakout arms ONE setup. Only a flat strategy can arm a
-        # new setup. This prevents an opposite breakout that occurs while a trade
-        # is open from becoming a stale setup that could fire immediately after SL.
-        if ss.execution.virtual_position == 0:
-            if close > ss.timing_high:
-                if not ss.timing_armed_buy:
-                    ss.timing_armed_buy = True
-                    ss.timing_armed_sell = False
-                    ss.timing_arm_time = bar_key
-            elif close < ss.timing_low:
-                if not ss.timing_armed_sell:
-                    ss.timing_armed_sell = True
-                    ss.timing_armed_buy = False
-                    ss.timing_arm_time = bar_key
-
-        if ss.timing_arm_time == bar_key:
-            return None
-
-        # Retest is intentionally NOT handled from candle OHLC here.
-        # Once a completed candle arms BO/BD, _process_timing_retest_tick()
-        # watches the live/current price every polling cycle and enters on touch.
         return triggered
-
-    def _place_timing_pending(self, ss: StrategyState, side: str, entry_price: float, sl: float):
-        """Compatibility hook for Timing Candle execution.
-
-        The current strategy intentionally uses immediate market execution when
-        the retest touches the Timing High/Low. The method name is retained for
-        compatibility with the pending-order execution hook/tests; it does not
-        submit a broker LIMIT order and therefore cannot create an invalid-price
-        SELL LIMIT when price has already moved through the level.
-        """
-        if side not in ("BUY", "SELL"):
-            return False
-        if not self.live_enabled:
-            ss.execution.virtual_position = 1 if side == "BUY" else -1
-            self._paper_open(ss, side, float(entry_price), sl_override=float(sl))
-            return True
-        ss.active_trade_id = uuid.uuid4().hex
-        ok = core.open_position(
-            self.state.mt5_symbol, side, self.state.lot, True,
-            sl=float(sl), magic_number=ss.execution.magic_number
-        )
-        if not ok:
-            ss.active_trade_id = None
-            return False
-        self._sync_live_snapshot(ss)
-        return ss.paper_position != 0
-
-    def _process_timing_retest_tick(self, ss: StrategyState, completed_row=None):
-        """Trigger Timing Candle entry from live price OR a completed-candle retest.
-
-        BO/BD is confirmed only from the last completed candle. Retest is accepted
-        in either of two ways:
-        1) live executable price touches the Timing level; or
-        2) the completed candle OHLC shows that the level was touched.
-
-        This dual check prevents a fast MT5 move from being missed by the 1-second
-        polling loop while still allowing immediate live entries when the tick is
-        available. The armed setup is consumed only after a successful entry.
-        """
-        if ss.strategy != "timing":
-            return None
-        if ss.execution.virtual_position != 0:
-            return None
-        if not self.state.entries_enabled or not ss.execution.entries_enabled:
-            return None
-        if ss.timing_high is None or ss.timing_low is None:
-            return None
-        if not (ss.timing_armed_buy or ss.timing_armed_sell):
-            return None
-
-        tick = core.mt5.symbol_info_tick(self.state.mt5_symbol)
-        if tick is None:
-            return None
-
-        bid = float(getattr(tick, "bid", 0.0) or 0.0)
-        ask = float(getattr(tick, "ask", 0.0) or 0.0)
-        if bid <= 0 or ask <= 0:
-            return None
-
-        # A completed candle can prove that the retest happened even if the
-        # 1-second live poll missed the exact price touch.
-        completed_low = None
-        completed_high = None
-        completed_bar_key = None
-        if completed_row is not None:
-            try:
-                completed_bar_key = str(completed_row["time"])
-                completed_low = float(completed_row["low"])
-                completed_high = float(completed_row["high"])
-            except (KeyError, TypeError, ValueError):
-                completed_bar_key = None
-                completed_low = completed_high = None
-
-        # The breakout candle itself is never allowed to count as the retest.
-        # This is critical because completed_row remains the same candle until
-        # the next candle closes.
-        completed_is_later_candle = (
-            completed_bar_key is not None
-            and completed_bar_key != ss.timing_arm_time
-        )
-
-        # BUY retest: live ask touches Timing High OR a LATER completed candle
-        # low reaches/crosses Timing High.
-        buy_retest_live = ask <= ss.timing_high
-        buy_retest_candle = (
-            completed_is_later_candle
-            and completed_low is not None
-            and completed_low <= ss.timing_high
-        )
-        if ss.timing_armed_buy and (buy_retest_live or buy_retest_candle):
-            side = "BUY"
-            entry_price = ask
-            sl = ss.timing_low
-            if self.live_enabled:
-                ok = self._place_timing_pending(ss, side, entry_price, sl)
-                if not ok:
-                    return None
-                self._record(
-                    "timing", side, "OPEN", ss.paper_entry_price or entry_price, "LIVE",
-                    message="LIVE — TIMING RETEST ENTRY",
-                    sl=ss.paper_sl or sl,
-                    volume=ss.volume or self.state.lot,
-                    trade_id=ss.active_trade_id,
-                    ticket=ss.live_ticket,
-                )
-            else:
-                ok = self._place_timing_pending(ss, side, entry_price, sl)
-                if not ok:
-                    return None
-
-            ss.timing_armed_buy = False
-            ss.timing_armed_sell = False
-            print(
-                f"TIMING RETEST -> BUY | Entry={entry_price:.3f} | "
-                f"Timing High={ss.timing_high:.3f} | SL={sl:.3f}"
-            )
-            return f"{DISPLAY_NAME['timing']}: BUY"
-
-        # SELL retest: live bid touches Timing Low OR a LATER completed candle
-        # high reaches/crosses Timing Low.
-        sell_retest_live = bid >= ss.timing_low
-        sell_retest_candle = (
-            completed_is_later_candle
-            and completed_high is not None
-            and completed_high >= ss.timing_low
-        )
-        if ss.timing_armed_sell and (sell_retest_live or sell_retest_candle):
-            side = "SELL"
-            entry_price = bid
-            sl = ss.timing_high
-            if self.live_enabled:
-                ok = self._place_timing_pending(ss, side, entry_price, sl)
-                if not ok:
-                    return None
-                self._record(
-                    "timing", side, "OPEN", ss.paper_entry_price or entry_price, "LIVE",
-                    message="LIVE — TIMING RETEST ENTRY",
-                    sl=ss.paper_sl or sl,
-                    volume=ss.volume or self.state.lot,
-                    trade_id=ss.active_trade_id,
-                    ticket=ss.live_ticket,
-                )
-            else:
-                ok = self._place_timing_pending(ss, side, entry_price, sl)
-                if not ok:
-                    return None
-
-            ss.timing_armed_buy = False
-            ss.timing_armed_sell = False
-            print(
-                f"TIMING RETEST -> SELL | Entry={entry_price:.3f} | "
-                f"Timing Low={ss.timing_low:.3f} | SL={sl:.3f}"
-            )
-            return f"{DISPLAY_NAME['timing']}: SELL"
-
-        return None
 
     def _run(self):
         engine = ChandraTrendEngine(self.state.mt5_symbol, self.state.timeframe, 3000)
@@ -1021,42 +898,25 @@ class BotManager:
                         time.sleep(1.0)
                         continue
                 df = engine.calculate_frame()
-                # Keep the latest row for live/current-price monitoring and the
-                # existing non-Timing strategies. Timing Candle BO/BD logic must
-                # use the LAST COMPLETED candle so the reference levels are never
-                # taken from a still-forming candle.
                 row = df.iloc[-1]
-                completed_row = df.iloc[-2] if len(df) >= 2 else row
                 bar_time = str(row["time"])
 
-                # Timing Candle retest is a tick event, so it must be evaluated
-                # every polling cycle, even when there is no new completed candle.
+                # BO/BD is confirmed only on completed candles, but the retest
+                # is a live-price event.  Check it every polling cycle so a
+                # touch never has to wait for another candle close.
                 timing_tick_trigger = None
-                if "timing" in self.state.strategy_states:
-                    tss = self.state.strategy_states["timing"]
-                    if self.live_enabled:
-                        self._sync_timing_pending(tss)
-                        timing_positions = self._live_positions(tss.execution.magic_number)
-                        if not timing_positions and tss.live_ticket:
-                            # Record broker-side SL/TP/manual close before flattening state.
-                            self._record_live_close(tss)
-                        self._sync_live_snapshot(tss)
-                    else:
-                        # Paper SL remains candle-based; retest entry accepts both
-                        # live tick touches and completed-candle touches.
-                        self._paper_check_sl(tss, row)
-                        tss.execution.virtual_position = tss.paper_position
-
-                    timing_tick_trigger = self._process_timing_retest_tick(tss, completed_row)
-                    if timing_tick_trigger:
-                        if self.state.last_signal is None:
-                            self.state.last_signal = {}
+                tss = self.state.strategy_states.get("timing")
+                if tss is not None:
+                    # ``row`` is the latest completed bar.  A tick observed
+                    # now belongs to the following live bar, even while the
+                    # breakout remains the last completed candle.
+                    timing_tick_trigger = self._process_timing_retest_tick(tss)
+                    if timing_tick_trigger and self.state.last_signal is not None:
                         self.state.last_signal["triggered"] = timing_tick_trigger
                         self.state.last_signal["timing_buy"] = bool(tss.timing_armed_buy)
                         self.state.last_signal["timing_sell"] = bool(tss.timing_armed_sell)
                         self.state.last_signal["timing_high"] = tss.timing_high
                         self.state.last_signal["timing_low"] = tss.timing_low
-
                 if bar_time != last_bar:
                     signal = core.signal_from_row(row)
                     self.state.last_signal = {
@@ -1082,6 +942,11 @@ class BotManager:
                     for name in self.state.strategies:
                         ss = self.state.strategy_states[name]
                         ss.last_l100 = float(signal.l100) if signal.l100 is not None else None
+                        prior_side = ss.paper_entry_side
+                        prior_entry = ss.paper_entry_price
+                        prior_sl = ss.paper_sl
+                        prior_target = ss.target
+                        prior_volume = ss.volume
                         if not self.live_enabled:
                             self._paper_check_sl(ss, row)
                             ss.execution.virtual_position = ss.paper_position
@@ -1094,14 +959,23 @@ class BotManager:
                                 self._paper_check_sl(ss, row)
                                 ss.execution.virtual_position = ss.paper_position
                             else:
-                                # Live position state was already synchronized at the
-                                # top of this polling cycle. Keep Timing Candle enabled
-                                # after broker-side SL/TP/manual exits.
                                 self._sync_live_snapshot(ss)
-                            # Timing Candle BO/BD/reference processing is based
-                            # ONLY on the just-closed candle. Retest is still checked
-                            # independently on every polling cycle from the live tick.
-                            timing_trigger = self._process_timing_candle(ss, completed_row)
+                                if before_live and ss.execution.virtual_position == 0 and ss.live_ticket:
+                                    # Broker-side SL/TP/manual exit hit the pending or
+                                    # market Timing Candle order between polling cycles.
+                                    # _sync_live_snapshot() already flattened these
+                                    # fields above (twice, once generically and once
+                                    # here); restore the pre-close values captured at
+                                    # the top of this loop iteration so the CLOSE row
+                                    # records the correct side/SL/target/volume instead
+                                    # of the reset defaults.
+                                    ss.paper_entry_side = prior_side
+                                    ss.paper_entry_price = prior_entry
+                                    ss.paper_sl = prior_sl
+                                    ss.target = prior_target
+                                    ss.volume = prior_volume
+                                    self._record_live_close(ss)
+                            timing_trigger = self._process_timing_candle(ss, row)
                             after = ss.execution.virtual_position
                             if timing_trigger:
                                 triggered.append(timing_trigger)
@@ -1169,11 +1043,11 @@ class BotManager:
                         self.state.last_signal["timing_low"] = tss.timing_low
                     self.state.last_signal["triggered"] = " • ".join(triggered) if triggered else None
                     last_bar = bar_time
+                self._enforce_strategy_targets()
                 time.sleep(1.0)
         except Exception as exc:
             self.state.error = str(exc)
             self.state.running = False
-            print(f"BOT ENGINE ERROR: {exc!r}")
         finally:
             try:
                 core.mt5.shutdown()
@@ -1375,108 +1249,404 @@ class BotManager:
     def timing_backtest(self, start_date: str, end_date: str, lot: float = 0.01,
                         max_trades_per_day: int = 0, daily_target_points: float = 0.0,
                         symbol: str | None = None, timeframe: str | None = None,
-                        timing_hour: int = 7, timing_minute: int = 0,
-                        timing_end_time: str | None = None):
-        """Backtest Timing Candle using India-time levels, BO/BD confirmation, and touch retests."""
+                        timing_hour: int = 9, timing_minute: int = 30,
+                        timing_end_time: str = "08:00"):
+        """Backtest Timing Candle with optional daily end time and diagnostics.
+
+        Timing Candle is evaluated in India time.  The optional ``end_time``
+        limits new entries and closes any open Timing Candle position at that
+        time.  Daily diagnostics explain why a day did not produce a trade.
+        """
         if not (0 <= int(timing_hour) <= 23 and 0 <= int(timing_minute) <= 59):
             raise ValueError("Invalid timing candle time")
-        if timing_end_time:
+
+        end_time = timing_end_time
+        if end_time is not None:
             try:
-                end_h, end_m = [int(x) for x in str(timing_end_time).split(":", 1)]
-                if not (0 <= end_h <= 23 and 0 <= end_m <= 59):
-                    raise ValueError
-                timing_end_minutes = end_h * 60 + end_m
+                end_hour, end_minute = [int(x) for x in str(end_time).strip().split(":", 1)]
             except (ValueError, TypeError):
-                raise ValueError("Invalid timing end time; expected HH:MM")
+                raise ValueError("Invalid Timing Candle end time. Use HH:MM.")
+            if not (0 <= end_hour <= 23 and 0 <= end_minute <= 59):
+                raise ValueError("Invalid Timing Candle end time. Use HH:MM.")
+            timing_minutes = int(timing_hour) * 60 + int(timing_minute)
+            end_minutes = end_hour * 60 + end_minute
+            if end_minutes <= timing_minutes:
+                raise ValueError("Timing Candle end time must be after the Timing Candle time")
         else:
-            timing_end_minutes = None
+            end_hour = end_minute = None
+
         try:
             local_start = datetime.fromisoformat(start_date).replace(tzinfo=ZoneInfo("Asia/Kolkata"))
-            local_end = datetime.fromisoformat(end_date).replace(tzinfo=ZoneInfo("Asia/Kolkata")) + timedelta(days=1) - timedelta(microseconds=1)
+            local_end = (
+                datetime.fromisoformat(end_date).replace(tzinfo=ZoneInfo("Asia/Kolkata"))
+                + timedelta(days=1) - timedelta(microseconds=1)
+            )
         except ValueError as exc:
             raise ValueError("Invalid date range") from exc
-        if local_end <= local_start: raise ValueError("To date must be on or after From date")
-        if lot <= 0: raise ValueError("Lot size must be greater than zero")
+
+        if local_end <= local_start:
+            raise ValueError("To date must be on or after From date")
+        if lot <= 0:
+            raise ValueError("Lot size must be greater than zero")
+        if max_trades_per_day < 0:
+            raise ValueError("Max trades per day cannot be negative")
+        if daily_target_points < 0:
+            raise ValueError("Daily target points cannot be negative")
+
         test_symbol = (symbol or self.state.symbol).strip()
         test_timeframe = (timeframe or self.state.timeframe).strip().upper()
         core.timeframe_minutes(test_timeframe)
-        if not core.mt5.initialize(): raise RuntimeError(f"MT5 initialize failed: {core.mt5.last_error()}")
+
+        if not core.mt5.initialize():
+            raise RuntimeError(f"MT5 initialize failed: {core.mt5.last_error()}")
+
         try:
             resolved_symbol = test_symbol
             if core.mt5.symbol_info(resolved_symbol) is None and resolved_symbol.upper() == "XAUUSD":
-                candidates=["XAUUSD.sd","XAUUSDm","XAUUSD.a","XAUUSD.r"]
-                resolved_symbol=next((c for c in candidates if core.mt5.symbol_info(c) is not None), None)
-            if not resolved_symbol: raise RuntimeError(f"MT5 symbol not found for '{test_symbol}'")
-            info=core.ensure_symbol(resolved_symbol)
-            start_utc=local_start.astimezone(timezone.utc); end_utc=local_end.astimezone(timezone.utc)
-            df=core.get_rates_range(resolved_symbol,test_timeframe,start_utc,end_utc)
-            if len(df)<2: raise RuntimeError("Not enough historical candles for this range")
-            point=float(getattr(info,"point",0.01) or 0.01); contract=float(getattr(info,"trade_contract_size",1.0) or 1.0)
-            position=0; entry=None; entry_time=None; sl=None; trades=[]; equity=0.0; peak=0.0; dd=0.0
-            timing_day=None; th=None; tl=None; armed_buy=False; armed_sell=False; arm_time=None
-            day_count=0; day_points=0.0; target_hit=False; daily={}
-            def close_trade(price,t,reason):
-                nonlocal position,entry,entry_time,sl,equity,peak,dd,day_points,target_hit
-                if position==0 or entry is None:return
-                side="BUY" if position==1 else "SELL"; move=(price-entry) if position==1 else (entry-price); pnl=move*lot*contract
-                equity+=pnl; peak=max(peak,equity); dd=max(dd,peak-equity); day_points+=move
-                dk=self._timing_local_dt(t).date().isoformat(); ds=daily.setdefault(dk,{"trades":0,"wins":0,"losses":0,"pnl":0.0,"points":0.0,"target_reached":False,"timing_found":False,"breakout_time":None,"retest_time":None,"diagnostic":day_diag.get(d,{})}); ds["trades"]+=1; ds["pnl"]+=pnl; ds["points"]+=move
-                if pnl>0:ds["wins"]+=1
-                elif pnl<0:ds["losses"]+=1
-                if daily_target_points>0 and day_points>=daily_target_points:target_hit=True;ds["target_reached"]=True
-                trades.append({"side":side,"entry":round(entry,int(getattr(info,"digits",2))),"entry_time":str(entry_time),"exit":round(price,int(getattr(info,"digits",2))),"exit_time":str(t),"reason":reason,"pnl":round(pnl,2),"initial_sl":round(sl,int(getattr(info,"digits",2))) if sl is not None else None,"reference":round(th if side=="BUY" else tl,int(getattr(info,"digits",2))) if (th if side=="BUY" else tl) is not None else None})
-                position=0;entry=None;entry_time=None;sl=None
-            for _,row in df.iterrows():
-                t=row["time"]; local=self._timing_local_dt(t); dk=local.date().isoformat(); close=float(row["close"]); high=float(row["high"]); low=float(row["low"])
-                if timing_day!=dk:
-                    timing_day=dk; th=None;tl=None;armed_buy=False;armed_sell=False;arm_time=None;day_count=0;day_points=0.0;target_hit=False;daily.setdefault(dk,{"trades":0,"wins":0,"losses":0,"pnl":0.0,"points":0.0,"target_reached":False,"timing_found":False,"breakout_time":None,"retest_time":None})
-                if position==1 and sl is not None and low<=sl: close_trade(sl,t,"TIMING_CANDLE_SL")
-                elif position==-1 and sl is not None and high>=sl: close_trade(sl,t,"TIMING_CANDLE_SL")
-                is_timing=local.hour==int(timing_hour) and local.minute==int(timing_minute)
+                candidates = ["XAUUSD.sd", "XAUUSDm", "XAUUSD.a", "XAUUSD.r"]
+                resolved_symbol = next(
+                    (candidate for candidate in candidates if core.mt5.symbol_info(candidate) is not None),
+                    None,
+                )
+                if resolved_symbol is None:
+                    matches = [
+                        item.name for item in (core.mt5.symbols_get() or [])
+                        if "XAUUSD" in item.name.upper()
+                    ]
+                    resolved_symbol = matches[0] if matches else None
+
+            if not resolved_symbol:
+                raise RuntimeError(f"MT5 symbol not found for '{test_symbol}'")
+
+            info = core.ensure_symbol(resolved_symbol)
+            start_utc = local_start.astimezone(timezone.utc)
+            end_utc = local_end.astimezone(timezone.utc)
+            df = core.get_rates_range(resolved_symbol, test_timeframe, start_utc, end_utc)
+            if len(df) < 2:
+                raise RuntimeError("Not enough historical candles for this range")
+
+            point = float(getattr(info, "point", 0.01) or 0.01)
+            contract = float(getattr(info, "trade_contract_size", 1.0) or 1.0)
+            digits = int(getattr(info, "digits", 2) or 2)
+
+            position = 0
+            entry = None
+            entry_time = None
+            sl = None
+            trades = []
+            equity = 0.0
+            peak = 0.0
+            dd = 0.0
+
+            timing_day = None
+            th = None
+            tl = None
+            armed_buy = False
+            armed_sell = False
+            arm_time = None
+            day_count = 0
+            day_points = 0.0
+            target_hit = False
+            daily = {}
+            day_diag = {}
+
+            def close_trade(price, t, reason):
+                nonlocal position, entry, entry_time, sl, equity, peak, dd, day_points, target_hit
+                if position == 0 or entry is None:
+                    return
+
+                side = "BUY" if position == 1 else "SELL"
+                move = (price - entry) if position == 1 else (entry - price)
+                pnl = move * lot * contract
+                equity += pnl
+                peak = max(peak, equity)
+                dd = max(dd, peak - equity)
+                day_points += move
+
+                dk = self._timing_local_dt(t).date().isoformat()
+                ds = daily.setdefault(
+                    dk,
+                    {
+                        "trades": 0,
+                        "wins": 0,
+                        "losses": 0,
+                        "pnl": 0.0,
+                        "points": 0.0,
+                        "target_reached": False,
+                    },
+                )
+                ds["trades"] += 1
+                ds["pnl"] += pnl
+                ds["points"] += move
+                if pnl > 0:
+                    ds["wins"] += 1
+                elif pnl < 0:
+                    ds["losses"] += 1
+
+                if daily_target_points > 0 and day_points >= daily_target_points:
+                    target_hit = True
+                    ds["target_reached"] = True
+
+                trades.append(
+                    {
+                        "side": side,
+                        "entry": round(entry, digits),
+                        "entry_time": str(entry_time),
+                        "exit": round(price, digits),
+                        "exit_time": str(t),
+                        "reason": reason,
+                        "pnl": round(pnl, 2),
+                        "initial_sl": round(sl, digits) if sl is not None else None,
+                        "reference": round(th if side == "BUY" else tl, digits)
+                        if (th if side == "BUY" else tl) is not None
+                        else None,
+                    }
+                )
+
+                position = 0
+                entry = None
+                entry_time = None
+                sl = None
+
+            for _, row in df.iterrows():
+                t = row["time"]
+                local = self._timing_local_dt(t)
+                dk = local.date().isoformat()
+                close = float(row["close"])
+                high = float(row["high"])
+                low = float(row["low"])
+
+                if timing_day != dk:
+                    timing_day = dk
+                    th = None
+                    tl = None
+                    armed_buy = False
+                    armed_sell = False
+                    arm_time = None
+                    day_count = 0
+                    day_points = 0.0
+                    target_hit = False
+                    daily.setdefault(
+                        dk,
+                        {
+                            "trades": 0,
+                            "wins": 0,
+                            "losses": 0,
+                            "pnl": 0.0,
+                            "points": 0.0,
+                            "target_reached": False,
+                        },
+                    )
+                    day_diag.setdefault(
+                        dk,
+                        {
+                            "timing_found": False,
+                            "timing_time": None,
+                            "timing_high": None,
+                            "timing_low": None,
+                            "breakout": None,
+                            "breakout_time": None,
+                            "retest": None,
+                            "retest_time": None,
+                            "reason": "NO TIMING CANDLE",
+                        },
+                    )
+
+                # The optional daily end time is checked before processing a candle.
+                # Therefore the end-time candle itself cannot create a new entry.
+                if end_hour is not None:
+                    current_minutes = local.hour * 60 + local.minute
+                    end_minutes = end_hour * 60 + end_minute
+                    if current_minutes >= end_minutes:
+                        if position != 0:
+                            close_trade(close, t, "END_TIME")
+                        diag = day_diag.setdefault(dk, {})
+                        if diag.get("reason") in (
+                            "NO TIMING CANDLE",
+                            "BREAKOUT NOT FOUND",
+                            "RETEST NOT FOUND",
+                        ):
+                            diag["reason"] = "END TIME REACHED"
+                        armed_buy = False
+                        armed_sell = False
+                        continue
+
+                # Broker-style SL: intrabar touch closes the position.
+                if position == 1 and sl is not None and low <= sl:
+                    close_trade(sl, t, "TIMING_CANDLE_SL")
+                elif position == -1 and sl is not None and high >= sl:
+                    close_trade(sl, t, "TIMING_CANDLE_SL")
+
+                is_timing = local.hour == int(timing_hour) and local.minute == int(timing_minute)
                 if is_timing:
-                    th=high;tl=low;armed_buy=False;armed_sell=False;arm_time=str(t)
-                    daily[dk]["timing_found"] = True
-                    daily[dk]["breakout_time"] = None
-                    daily[dk]["retest_time"] = None
-                    print(
-                        f"TIMING CANDLE FOUND | {local.strftime('%Y-%m-%d %H:%M:%S')} IST | "
-                        f"O={float(row['open']):.3f} H={th:.3f} L={tl:.3f} C={close:.3f}"
+                    th = high
+                    tl = low
+                    armed_buy = False
+                    armed_sell = False
+                    arm_time = str(t)
+                    day_diag[dk].update(
+                        {
+                            "timing_found": True,
+                            "timing_time": str(t),
+                            "timing_high": th,
+                            "timing_low": tl,
+                            "reason": "WAITING FOR BREAKOUT",
+                        }
                     )
                     continue
-                if th is None or tl is None: continue
-                # A CLOSED candle beyond the timing level arms the breakout.
-                # The breakout candle itself cannot be the retest/entry candle.
-                if close>th:
-                    if not armed_buy:
-                        armed_buy=True;armed_sell=False;arm_time=str(t)
-                        if daily[dk].get("breakout_time") is None:
-                            daily[dk]["breakout_time"] = str(t)
-                elif close<tl:
-                    if not armed_sell:
-                        armed_sell=True;armed_buy=False;arm_time=str(t)
-                        if daily[dk].get("breakout_time") is None:
-                            daily[dk]["breakout_time"] = str(t)
 
-                if arm_time==str(t):
+                if th is None or tl is None:
                     continue
 
-                # TIMING CANDLE ONLY: retest/touch is enough to trigger entry.
-                # No requirement for the retest candle to close back on the
-                # breakout side. Entry is taken at the timing level.
-                blocked=target_hit or (max_trades_per_day>0 and day_count>=max_trades_per_day)
-                if timing_end_minutes is not None and (local.hour * 60 + local.minute) > timing_end_minutes:
-                    blocked = True
-                if position==0 and not blocked:
-                    if armed_buy and low<=th:
-                        position=1;entry=th;entry_time=t;sl=tl;day_count+=1;armed_buy=False;armed_sell=False
-                    elif armed_sell and high>=tl:
-                        position=-1;entry=tl;entry_time=t;sl=th;day_count+=1;armed_sell=False;armed_buy=False
-            if position!=0: close_trade(float(df.iloc[-1]["close"]),df.iloc[-1]["time"],"END_OF_TEST")
-            wins=sum(t["pnl"]>0 for t in trades);losses=sum(t["pnl"]<0 for t in trades)
-            return {"ok":True,"strategy":"timing","symbol":resolved_symbol,"timeframe":test_timeframe,"from":start_date,"to":end_date,"candles":len(df),"timing_hour":timing_hour,"timing_minute":timing_minute,"timing_end_time":timing_end_time,"trades":len(trades),"buy_trades":sum(t["side"]=="BUY" for t in trades),"sell_trades":sum(t["side"]=="SELL" for t in trades),"wins":wins,"losses":losses,"win_rate":round(wins/len(trades)*100 if trades else 0,2),"net_pnl":round(equity,2),"max_drawdown":round(dd,2),"best_trade":round(max((t["pnl"] for t in trades),default=0),2),"worst_trade":round(min((t["pnl"] for t in trades),default=0),2),"max_trades_per_day":max_trades_per_day,"daily_target_points":daily_target_points,"daily_stats":[{"date":d,"timing_found":bool(x.get("timing_found",False)),**{k:round(v,2) if isinstance(v,float) else v for k,v in x.items() if k != "timing_found"}} for d,x in sorted(daily.items())],"profitable_days":sum(v["pnl"]>0 for v in daily.values()),"losing_days":sum(v["pnl"]<0 for v in daily.values()),"trading_days":len(daily),"trades_detail":trades}
+                # A CLOSED candle beyond the timing level arms the breakout.
+                # The breakout candle itself cannot be the retest/entry candle.
+                if close > th:
+                    if not armed_buy:
+                        armed_buy = True
+                        armed_sell = False
+                        arm_time = str(t)
+                        day_diag[dk].update(
+                            {
+                                "breakout": "BUY",
+                                "breakout_time": str(t),
+                                "reason": "WAITING FOR RETEST",
+                            }
+                        )
+                elif close < tl:
+                    if not armed_sell:
+                        armed_sell = True
+                        armed_buy = False
+                        arm_time = str(t)
+                        day_diag[dk].update(
+                            {
+                                "breakout": "SELL",
+                                "breakout_time": str(t),
+                                "reason": "WAITING FOR RETEST",
+                            }
+                        )
+
+                if arm_time == str(t):
+                    continue
+
+                blocked = target_hit or (
+                    max_trades_per_day > 0 and day_count >= max_trades_per_day
+                )
+                if position == 0 and not blocked:
+                    if armed_buy and low <= th and close >= th:
+                        position = 1
+                        entry = th
+                        entry_time = t
+                        sl = tl
+                        day_count += 1
+                        armed_buy = False
+                        day_diag[dk].update(
+                            {
+                                "retest": "BUY",
+                                "retest_time": str(t),
+                                "reason": "RETEST FOUND",
+                            }
+                        )
+                    elif armed_sell and high >= tl and close <= tl:
+                        position = -1
+                        entry = tl
+                        entry_time = t
+                        sl = th
+                        day_count += 1
+                        armed_sell = False
+                        day_diag[dk].update(
+                            {
+                                "retest": "SELL",
+                                "retest_time": str(t),
+                                "reason": "RETEST FOUND",
+                            }
+                        )
+
+            # Do not carry a position beyond the requested test window.
+            if position != 0:
+                last = df.iloc[-1]
+                close_trade(float(last["close"]), last["time"], "END_OF_TEST")
+
+            # Give every requested trading day an explicit diagnostic, including
+            # days with zero trades.
+            all_days = sorted(set(daily) | set(day_diag))
+            for d in all_days:
+                day_diag.setdefault(
+                    d,
+                    {
+                        "timing_found": False,
+                        "timing_time": None,
+                        "timing_high": None,
+                        "timing_low": None,
+                        "breakout": None,
+                        "breakout_time": None,
+                        "retest": None,
+                        "retest_time": None,
+                        "reason": "NO DATA",
+                    },
+                )
+                ds = daily.setdefault(
+                    d,
+                    {
+                        "trades": 0,
+                        "wins": 0,
+                        "losses": 0,
+                        "pnl": 0.0,
+                        "points": 0.0,
+                        "target_reached": False,
+                    },
+                )
+                if ds["trades"] == 0 and day_diag[d].get("reason") == "WAITING FOR BREAKOUT":
+                    day_diag[d]["reason"] = "BREAKOUT NOT FOUND"
+                elif ds["trades"] == 0 and day_diag[d].get("reason") == "WAITING FOR RETEST":
+                    day_diag[d]["reason"] = "RETEST NOT FOUND"
+
+            wins = sum(t["pnl"] > 0 for t in trades)
+            losses = sum(t["pnl"] < 0 for t in trades)
+
+            return {
+                "ok": True,
+                "strategy": "timing",
+                "symbol": resolved_symbol,
+                "timeframe": test_timeframe,
+                "from": start_date,
+                "to": end_date,
+                "candles": len(df),
+                "timing_hour": timing_hour,
+                "timing_minute": timing_minute,
+                "end_time": end_time,
+                "trades": len(trades),
+                "buy_trades": sum(t["side"] == "BUY" for t in trades),
+                "sell_trades": sum(t["side"] == "SELL" for t in trades),
+                "wins": wins,
+                "losses": losses,
+                "win_rate": round(wins / len(trades) * 100 if trades else 0, 2),
+                "net_pnl": round(equity, 2),
+                "max_drawdown": round(dd, 2),
+                "best_trade": round(max((t["pnl"] for t in trades), default=0), 2),
+                "worst_trade": round(min((t["pnl"] for t in trades), default=0), 2),
+                "max_trades_per_day": max_trades_per_day,
+                "daily_target_points": daily_target_points,
+                "daily_stats": [
+                    {
+                        "date": d,
+                        **{
+                            k: round(v, 2) if isinstance(v, float) else v
+                            for k, v in x.items()
+                        },
+                        "diagnostic":day_diag.get(d,{}),
+                    }
+                    for d, x in sorted(daily.items())
+                ],
+                "profitable_days": sum(v["pnl"] > 0 for v in daily.values()),
+                "losing_days": sum(v["pnl"] < 0 for v in daily.values()),
+                "trading_days": len(daily),
+                "trades_detail": trades,
+            }
         finally:
-            try: core.mt5.shutdown()
-            except Exception: pass
+            try:
+                core.mt5.shutdown()
+            except Exception:
+                pass
 
     def status_payload(self):
         data = dict(self.state.__dict__)
@@ -1496,12 +1666,10 @@ class BotManager:
                 "timing_low": ss.timing_low,
                 "timing_armed_buy": ss.timing_armed_buy,
                 "timing_armed_sell": ss.timing_armed_sell,
-                "timing_waiting_fresh_breakout": ss.timing_waiting_fresh_breakout,
-                "timing_sl_bar_time": ss.timing_sl_bar_time,
-                "timing_pending_ticket": ss.timing_pending_ticket,
-                "timing_pending_side": ss.timing_pending_side,
-                "timing_pending_price": ss.timing_pending_price,
-                "timing_pending_sl": ss.timing_pending_sl,
+                "session_target_points": ss.session_target_points,
+                "session_realized_points": ss.session_realized_points,
+                "session_open_points": self._strategy_open_points(ss),
+                "session_target_reached": ss.session_target_reached,
             }
         manual = self._manual_state()
         strategy_status["manual"] = {
