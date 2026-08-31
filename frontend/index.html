@@ -275,10 +275,10 @@ button{padding:7px 11px;border:0;border-radius:6px;cursor:pointer;margin:6px 5px
           <div class="metric"><span>SYMBOL</span><b id="monitorSymbol">XAUUSD</b></div>
         </div>
         <div class="combined-pnl">
-          <div class="row"><span>Strategic P&L</span><b id="strategicPnl">0.00</b></div>
-          <div class="row"><span>Trap Candles P&L</span><b id="magicalPnl">0.00</b></div>
-          <div class="row"><span>Timing P&L</span><b id="timingPnl">0.00</b></div>
-          <div class="row combined-total"><strong>Combined P&L</strong><strong id="combinedPnl">0.00</strong></div>
+          <div class="row"><span>Strategic Run P&L</span><b id="strategicPnl">0.00</b></div>
+          <div class="row"><span>Trap Candles Run P&L</span><b id="magicalPnl">0.00</b></div>
+          <div class="row"><span>Timing Run P&L</span><b id="timingPnl">0.00</b></div>
+          <div class="row combined-total"><strong>Combined Run P&L</strong><strong id="combinedPnl">0.00</strong></div>
         </div>
         <div class="strategy-status-grid" id="strategyStatusGrid"></div>
         <div class="safety-bar">
@@ -460,7 +460,7 @@ function renderStrategyPanels(selected){
   grid.innerHTML=(selected||[]).map(name=>{
     const d=defs[name];
     if(!d) return "";
-    return `<div class="strategy-card" data-strategy-panel="${d.key}"><h3>${d.title}</h3><div class="kv"><span>Position</span><b id="${d.key}Position">FLAT</b></div><div class="kv"><span>Entry</span><b id="${d.key}Entry">—</b></div><div class="kv"><span>Current SL</span><b id="${d.key}Sl">—</b></div><div class="kv"><span>P&L</span><b id="${d.key}CurrentPnl">0.00</b></div><div class="kv"><span>Points</span><b id="${d.key}TargetPointsStatus">OFF</b></div>${d.extra}<button class="danger small" onclick="closeStrategy('${d.key}')">${d.close}</button></div>`;
+    return `<div class="strategy-card" data-strategy-panel="${d.key}"><h3>${d.title}</h3><div class="kv"><span>Position</span><b id="${d.key}Position">FLAT</b></div><div class="kv"><span>Entry</span><b id="${d.key}Entry">—</b></div><div class="kv"><span>Current SL</span><b id="${d.key}Sl">—</b></div><div class="kv"><span>Run P&L</span><b id="${d.key}CurrentPnl">0.00</b></div><div class="kv"><span>Run Points</span><b id="${d.key}TargetPointsStatus">OFF</b></div>${d.extra}<button class="danger small" onclick="closeStrategy('${d.key}')">${d.close}</button></div>`;
   }).join("");
   grid.style.display=(selected&&selected.length)?"grid":"none";
 }
@@ -688,7 +688,7 @@ async function poll(){
   resume.disabled=enabled||!x.running;
   document.getElementById("safetyReason").textContent=x.safety_halt_reason?" • "+x.safety_halt_reason:"";
 
-  window.__combinedPnl=Number(x.combined_pnl||0);
+  window.__combinedPnl=Number(x.combined_session_pnl||0);
 
   const mmp=document.getElementById("manualModePill");
   if(mmp)mmp.textContent=displayMode.toUpperCase();
@@ -717,11 +717,13 @@ function renderStrategyStatus(ss){
       el.className=v.position===1?"buy":v.position===-1?"sell":"";
       document.getElementById(name+"Entry").textContent=v.entry_price!=null?Number(v.entry_price).toFixed(2):"—";
       document.getElementById(name+"Sl").textContent=v.sl!=null?Number(v.sl).toFixed(2):"—";
-      const pnl=Number(v.total_pnl||0);
+      const pnl=Number(v.session_total_pnl||0);
       const p=document.getElementById(name+"CurrentPnl");
       p.textContent=pnl.toFixed(2); p.className=pnl>0?"pnl-positive":pnl<0?"pnl-negative":"";
       const top=document.getElementById(name+"Pnl");
       if(top){top.textContent=pnl.toFixed(2);top.className=pnl>0?"pnl-positive":pnl<0?"pnl-negative":"";}
+      const logPill=document.getElementById(name+"LogPill");
+      if(logPill)logPill.textContent="Run P&L "+pnl.toFixed(2);
       const target=document.getElementById(name+"TargetPointsStatus");
       if(target){
         const goal=v.session_target_points;
@@ -748,7 +750,7 @@ function renderStrategyStatus(ss){
   if(timingLevels) timingLevels.textContent=(tv.timing_high!=null&&tv.timing_low!=null)?`${Number(tv.timing_high).toFixed(2)} / ${Number(tv.timing_low).toFixed(2)}`:"—";
 }
 
-async function loadTrades(){try{const x=await api("/api/trading/trades?_=${Date.now()}");const groups={strategic:[],magical:[],timing:[]};(x.trades||[]).forEach(t=>{if(groups[t.strategy])groups[t.strategy].push(t)});renderTradeLog("strategic",groups.strategic);renderTradeLog("magical",groups.magical);renderTradeLog("timing",groups.timing);const sums={strategic:0,magical:0,timing:0};for(const t of x.trades||[]){if(t.pnl!=null&&sums[t.strategy]!=null)sums[t.strategy]+=Number(t.pnl)}document.getElementById("strategicPnl").textContent=sums.strategic.toFixed(2);document.getElementById("magicalPnl").textContent=sums.magical.toFixed(2);document.getElementById("combinedPnl").textContent=(Number(window.__combinedPnl||0)).toFixed(2);document.getElementById("strategicLogPill").textContent="P&L "+sums.strategic.toFixed(2);document.getElementById("magicalLogPill").textContent="P&L "+sums.magical.toFixed(2);document.getElementById("timingLogPill").textContent="P&L "+sums.timing.toFixed(2);document.getElementById("timingPnl").textContent=sums.timing.toFixed(2)}catch(e){}}
+async function loadTrades(){try{const x=await api("/api/trading/trades?_=${Date.now()}");const groups={strategic:[],magical:[],timing:[]};(x.trades||[]).forEach(t=>{if(groups[t.strategy])groups[t.strategy].push(t)});renderTradeLog("strategic",groups.strategic);renderTradeLog("magical",groups.magical);renderTradeLog("timing",groups.timing)}catch(e){}}
 function renderTradeLog(strategyName,rows){
   const el=document.getElementById(strategyName+"TradeLog");
   if(!rows.length){el.innerHTML='<div class="empty">No trades yet.</div>';return}

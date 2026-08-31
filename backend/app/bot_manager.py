@@ -3,13 +3,13 @@ import pandas as pd
 import threading
 import time
 import uuid
-from pathlib import Path
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 from backend.app.engine.chandra_trend_engine import ChandraTrendEngine
 from backend.app.engine import chandra_core as core
 from backend.app.strategies.timing_candle import breakout_arm, retest_signal
+from backend.app.runtime_paths import app_root
 
 # Website V1 enables the engine's L100-based initial/trailing SL.
 core.STOPLOSS_CONFIG["enabled"] = True
@@ -19,7 +19,8 @@ STRATEGIES = ("strategic", "magical", "timing")
 MAGIC_BY_STRATEGY = {"strategic": 26081201, "magical": 26081202, "timing": 26081203, "manual": 26081204}
 ENGINE_MODE = {"strategic": "buy_sell", "magical": "magical", "timing": "timing"}
 DISPLAY_NAME = {"strategic": "Strategic Entry", "magical": "Magical Entry", "timing": "Timing Candle"}
-HISTORY_FILE = Path(__file__).resolve().parents[2] / "data" / "trade_history.json"
+HISTORY_FILE = app_root() / "data" / "trade_history.json"
+print(f"Chandra trade log file: {HISTORY_FILE}", flush=True)
 
 @dataclass
 class TradeRecord:
@@ -47,6 +48,11 @@ class StrategyState:
     last_l100: float | None = None
     current_pnl: float = 0.0
     realized_pnl: float = 0.0
+    session_realized_pnl: float = 0.0
+    # When the engine is started while a broker position already exists,
+    # exclude its pre-start movement from this run's P&L/points.
+    session_open_pnl_baseline: float = 0.0
+    session_open_points_baseline: float = 0.0
     open_trade_time: str | None = None
     timing_date: str | None = None
     timing_high: float | None = None
@@ -90,6 +96,7 @@ class BotState:
     timing_minute: int = 30
     timing_end_time: str | None = None
     strategy_target_points: dict = field(default_factory=dict)
+    session_started_at: str | None = None
     contract_size: float = 1.0
     trades: list = field(default_factory=list)
     strategy_states: dict = field(default_factory=dict)
@@ -302,12 +309,22 @@ class BotManager:
         self._stop.clear()
         self.state.error = None
         self.state.running = True
+        self.state.session_started_at = self._mt5_chart_log_time()
         self.state.entries_enabled = True
         self.state.safety_halt_reason = None
         for ss in self.state.strategy_states.values():
             ss.session_realized_points = 0.0
             ss.session_target_reached = False
         self._reset_strategy_states()
+        if self.live_enabled:
+            # A position opened by an earlier run belongs to its earlier run.
+            # Snapshot it now so only movement after this Start Bot action is
+            # counted towards this run's target.
+            for ss in self.state.strategy_states.values():
+                self._sync_live_snapshot(ss)
+                if ss.paper_position != 0:
+                    ss.session_open_pnl_baseline = ss.current_pnl
+                    ss.session_open_points_baseline = self._strategy_open_points(ss)
         self._restore_realized_pnl()
         if self._manual_state().paper_position == 0:
             self._reset_manual_state()
@@ -438,6 +455,7 @@ class BotManager:
         pnl = ((price - entry) if side == "BUY" else (entry - price)) * (ss.volume or self.state.lot) * self.state.contract_size
         if ss.strategy in STRATEGIES:
             ss.session_realized_points += (price - entry) if side == "BUY" else (entry - price)
+            ss.session_realized_pnl += pnl
         ss.realized_pnl += pnl
         ss.current_pnl = 0.0
         self._record(ss.strategy, side, "CLOSE", price, "SIMULATED", pnl=pnl,
@@ -538,7 +556,8 @@ class BotManager:
             if ss.strategy in STRATEGIES and entry_price is not None:
                 ss.session_realized_points += (
                     (price - entry_price) if side == "BUY" else (entry_price - price)
-                )
+                ) - ss.session_open_points_baseline
+                ss.session_realized_pnl += pnl - ss.session_open_pnl_baseline
             comment = str(getattr(exit_deal, "comment", "") or "").strip()
             reason = comment or "BROKER EXIT"
             self._record(
@@ -551,6 +570,8 @@ class BotManager:
             ss.active_trade_id = None
             ss.live_ticket = None
             ss.live_exit_pending = None
+            ss.session_open_pnl_baseline = 0.0
+            ss.session_open_points_baseline = 0.0
             return True
         except Exception:
             return False
@@ -739,7 +760,7 @@ class BotManager:
         reached = False
         for name, ss in self.state.strategy_states.items():
             target = ss.session_target_points
-            net_points = ss.session_realized_points + self._strategy_open_points(ss)
+            net_points = ss.session_realized_points + self._strategy_open_points(ss) - ss.session_open_points_baseline
             if target is None or ss.session_target_reached or net_points < target:
                 continue
             # Disable this strategy before closing to prevent a race with a
@@ -1682,13 +1703,15 @@ class BotManager:
                 "pnl": ss.current_pnl,
                 "realized_pnl": ss.realized_pnl,
                 "total_pnl": ss.realized_pnl + ss.current_pnl,
+                "session_realized_pnl": ss.session_realized_pnl,
+                "session_total_pnl": ss.session_realized_pnl + ss.current_pnl - ss.session_open_pnl_baseline,
                 "timing_high": ss.timing_high,
                 "timing_low": ss.timing_low,
                 "timing_armed_buy": ss.timing_armed_buy,
                 "timing_armed_sell": ss.timing_armed_sell,
                 "session_target_points": ss.session_target_points,
                 "session_realized_points": ss.session_realized_points,
-                "session_open_points": self._strategy_open_points(ss),
+                "session_open_points": self._strategy_open_points(ss) - ss.session_open_points_baseline,
                 "session_target_reached": ss.session_target_reached,
             }
         manual = self._manual_state()
@@ -1705,6 +1728,7 @@ class BotManager:
         }
         data["strategy_status"] = strategy_status
         data["combined_pnl"] = sum(v["total_pnl"] for v in strategy_status.values())
+        data["combined_session_pnl"] = sum(v["session_total_pnl"] for v in strategy_status.values() if "session_total_pnl" in v)
         data.pop("strategy_states", None)
         data.pop("manual_state", None)
         return data
