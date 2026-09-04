@@ -1,41 +1,50 @@
 # Python
 __pycache__/
-*.pyc
-.pytest_cache/
+*.py[cod]
+*.pyo
 
-# Environment
-.env
+# Virtual environment
 .venv/
+venv/
+env/
 
-# Runtime / local data
-data/*.json
-timing_runtime_state.json
+# Environment / secrets
+.env
+.env.*
+!.env.example
 
-# Developer license key
-/tools/license_keys/private_key.pem
+# IDE
+.vscode/
+.idea/
 
-# Local license/runtime state
-/license/license.key
-/data/license_state.json
-release/license/
-release/data/
+# Runtime
+data/
+logs/
+*.log
 
-# PyInstaller
-build/
+# Generated files
 dist/
-
-# Generated releases
-release/*.exe
-release/*.zip
-
-# PyInstaller / generated builds
 build/
-dist/
+*.spec
 
-# Generated release files
-release/*.exe
-release/*.zip
+# Trading/runtime files
+*.json
+*.db
+*.sqlite
+*.sqlite3
 
-# Local license/runtime files
-release/license/
-release/data/
+# OS
+.DS_Store
+Thumbs.db
+
+# Pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Temporary
+tmp/
+temp/
+# Release artifacts
+*.zip
+release/

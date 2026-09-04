@@ -635,7 +635,7 @@ class BotManager:
                     "volume": ss.volume,
                 }
             self._record_live_close(ss)
-        self._sync_live_snapshot(ss, positions)
+        self._sync_live_snapshot(ss)
 
     def manual_order(self, side: str, lot: float, sl: float | None = None, target: float | None = None):
         side = side.upper()
