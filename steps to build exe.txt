@@ -1,0 +1,9 @@
+Run these commands in PowerShell.
+1. Install the build dependencies:
+
+Set-Location "C:\dashboard\forex\ChandraTrading"
+
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt pyinstaller
+
+2. Build using the existing project specification:
+.\.venv\Scripts\python.exe -m PyInstaller --noconfirm --clean --distpath "dist\pob" --workpath "build\pob\work" "ChandraTrading.spec"

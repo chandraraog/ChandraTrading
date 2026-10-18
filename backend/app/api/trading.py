@@ -1,12 +1,23 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Literal
 from backend.app.bot_manager import manager
 
 router=APIRouter(prefix="/api/trading", tags=["trading"])
 
+class StrategySettingsIn(BaseModel):
+    symbol: str = Field(default="XAUUSD", min_length=1)
+    timeframe: Literal["M1", "M3", "M5", "M15"] = "M1"
+    lot: float = Field(default=0.01, gt=0, allow_inf_nan=False)
+
+    timing_hour: int = Field(default=4, ge=0, le=23)
+    timing_minute: int = Field(default=0, ge=0, le=59)
+    timing_end_time: Optional[str] = "08:00"
+    timing_entry_mode: Literal["retest", "direct"] = "retest"
+
 class ConfigIn(BaseModel):
     strategies: List[str]=[]
+    strategy_settings: Dict[str, StrategySettingsIn] = Field(default_factory=dict)
     symbol: str="XAUUSD"
     timeframe: str="M1"
     lot: float=0.01
@@ -14,7 +25,14 @@ class ConfigIn(BaseModel):
     timing_hour: int=4
     timing_minute: int=0
     timing_end_time: Optional[str]="08:00"
+    timing_entry_mode: Literal["retest", "direct"] = "retest"
     strategy_target_points: Dict[str, Optional[float]]={}
+    pob_level_source: Literal["manual", "candle"] = "manual"
+    pob_candle_time: str = "04:00"
+    pob_high: float | None = Field(default=None, gt=0, allow_inf_nan=False)
+    pob_low: float | None = Field(default=None, gt=0, allow_inf_nan=False)
+    pob_entry_mode: Literal["retest", "direct"] = "retest"
+    pob_sl_mode: Literal["default", "levels"] = "levels"
 class BacktestIn(BaseModel):
     from_date: str; to_date: str; symbol: str="XAUUSD"; timeframe: str="M1"; lot: float=0.01
     max_trades_per_day: int=0; daily_target_points: float=0.0; timing_hour: int=4; timing_minute: int=0; timing_end_time: Optional[str]=None
@@ -24,6 +42,7 @@ class ManualIn(BaseModel):
 @router.post('/configure')
 def configure(p:ConfigIn):
     try: manager.configure(**p.model_dump())
+    except PermissionError as e: raise HTTPException(403,str(e))
     except Exception as e: raise HTTPException(422,str(e))
     return {"ok":True,"message":"Configuration saved."}
 @router.post('/mt5-test')
@@ -31,6 +50,7 @@ def mt5_test(): return manager.mt5_test()
 @router.post('/start')
 def start():
     try: manager.start()
+    except PermissionError as e: raise HTTPException(403,str(e))
     except Exception as e: raise HTTPException(400,str(e))
     return {"ok":True}
 @router.post('/stop')
@@ -40,6 +60,7 @@ def stop_trading(): manager.stop_trading(); return {"ok":True}
 @router.post('/resume-trading')
 def resume():
     try: manager.resume_trading()
+    except PermissionError as e: raise HTTPException(403,str(e))
     except Exception as e: raise HTTPException(400,str(e))
     return {"ok":True}
 @router.post('/close/{strategy}')
@@ -50,8 +71,13 @@ def close(strategy:str):
 def close_all(): return manager.close_all()
 @router.get('/status')
 def status(): return manager.status_payload()
+@router.post('/trades/clear')
+def clear_trades():
+    try: return manager.clear_trade_history()
+    except Exception as e: raise HTTPException(500, f"Could not clear saved logs: {e}")
 @router.get('/trades')
 def trades():
+    manager.reconcile_saved_trade_logs()
     # Stable response shape expected by the frontend trade-log renderer.
     return {"trades": manager.state.trades}
 @router.post('/manual/order')

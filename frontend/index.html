@@ -55,116 +55,24 @@ input:focus,select:focus{outline:none;border-color:var(--blue)}
 button{padding:7px 11px;border:0;border-radius:6px;cursor:pointer;margin:6px 5px 0 0;font-size:11px;font-weight:650}
 .primary{background:var(--green);color:white}.secondary{background:var(--panel2);color:var(--text);border:1px solid var(--border)}.danger{background:var(--red);color:white}.google{background:white;color:#222}
 .auth{display:flex;align-items:center;gap:5px}.auth button{margin:0}
-.strategy-row{display:flex;gap:8px;margin:5px 0 11px}
+.strategy-row{display:flex;flex-wrap:wrap;gap:8px;margin:5px 0 11px}
 .strategy-row label{display:flex;align-items:center;gap:6px;color:var(--text);font-size:11px;margin:0;padding:7px 10px;border:1px solid var(--border);border-radius:6px;background:var(--panel2);cursor:pointer}
 .strategy-row input{width:auto;margin:0}.strategy-row label.selected{border-color:var(--blue);box-shadow:inset 0 0 0 1px var(--blue)}
 .strategy-status-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}.strategy-card{padding:10px;background:var(--panel2);border:1px solid var(--border);border-radius:7px}.strategy-card h3{font-size:11px;margin:0 0 7px}.strategy-card .kv{display:flex;justify-content:space-between;gap:8px;color:var(--muted);font-size:10px;margin:4px 0}.strategy-card .kv b{color:var(--text)}.pnl-positive{color:var(--green)!important}.pnl-negative{color:var(--red)!important}.log-grid{display:grid;grid-template-columns:1fr;gap:10px}.trade-log-header{margin-bottom:0}.trade-log-actions{display:flex;align-items:center;gap:7px}.icon-btn{width:28px;height:24px;padding:0;border:1px solid var(--border);border-radius:6px;background:var(--panel2);color:var(--text);cursor:pointer;font-size:12px;line-height:1}.icon-btn:hover{background:var(--border)}.trade-log-section.collapsed #tradeLogContent{display:none}.trade-log-section.collapsed .trade-log-header{margin-bottom:0}.log-card{border:1px solid var(--border);border-radius:7px;padding:10px;background:var(--panel2)}.log-card .section-title{margin-bottom:7px}.log-card.collapsed .log{display:none}.log-card.collapsed .section-title{margin-bottom:0}.log-card-actions{display:flex;align-items:center;gap:6px}.log-card-toggle{width:26px;height:22px;padding:0;border:1px solid var(--border);border-radius:6px;background:var(--panel);color:var(--text);cursor:pointer;font-size:11px;line-height:1}.log-card-toggle:hover{background:var(--border)}.combined-pnl{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;padding:8px;background:var(--panel2);border:1px solid var(--border);border-radius:7px;margin-bottom:10px}.combined-pnl .row{display:flex;flex-direction:column;justify-content:center;gap:3px;font-size:10px;margin:0;padding:7px 8px;border:1px solid var(--border);border-radius:6px;background:var(--panel)}.combined-pnl .row b,.combined-pnl .row strong{font-size:12px}.combined-pnl .combined-total{border-color:var(--blue);background:var(--panel2)}
+.strategy-card[data-strategy-panel="pob"]{grid-column:span 2;min-width:0}
 .exec-toggle{display:inline-flex;align-items:center;gap:2px;padding:3px;border:1px solid var(--border);border-radius:999px;background:var(--panel2)}
 .exec-toggle label{margin:0;padding:5px 9px;border-radius:999px;color:var(--muted);font-size:10px;font-weight:700;cursor:pointer;user-select:none}
 .exec-toggle input{display:none}
 .exec-toggle label.active{background:var(--blue);color:white}
 .exec-toggle.live-active label.active{background:var(--red);color:white}
-.live-warning{display:none;padding:7px 9px;margin:8px 0 0;background:rgba(248,81,73,.08);border:1px solid rgba(248,81,73,.28);border-radius:6px;color:var(--red);font-size:10px}
-.live-warning{
-  display:none;
-  position:relative;
-  height:42px;
-  margin:-2px 0 12px;
-  overflow:hidden;
-  border-radius:8px;
-  border:1px solid rgba(248,81,73,.34);
-  background:linear-gradient(90deg,rgba(248,81,73,.13),rgba(248,81,73,.055),rgba(248,81,73,.13));
-  color:var(--text);
-  box-shadow:inset 0 0 18px rgba(248,81,73,.05);
-}
-.live-warning.live-warning-active{display:flex;align-items:center}
-.live-warning::before{
-  content:"";
-  position:absolute;
-  inset:0;
-  background:linear-gradient(90deg,rgba(248,81,73,.08),transparent 25%,transparent 75%,rgba(248,81,73,.08));
-  pointer-events:none;
-}
-.live-warning-badge{
-  position:relative;
-  z-index:2;
-  height:100%;
-  min-width:82px;
-  padding:0 13px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  gap:7px;
-  background:rgba(248,81,73,.16);
-  border-right:1px solid rgba(248,81,73,.28);
-  color:var(--red);
-  font-size:10px;
-  font-weight:800;
-  letter-spacing:.7px;
-}
-.live-warning-dot{
-  width:7px;
-  height:7px;
-  border-radius:50%;
-  background:var(--red);
-  box-shadow:0 0 0 0 rgba(248,81,73,.65);
-  animation:liveDotPulse 1.15s ease-out infinite;
-}
-.live-warning-viewport{
-  position:relative;
-  flex:1;
-  min-width:0;
-  height:100%;
-  overflow:hidden;
-  display:flex;
-  align-items:center;
-}
-.live-warning-track{
-  display:flex;
-  width:max-content;
-  white-space:nowrap;
-  color:var(--text);
-  font-size:11px;
-  font-weight:650;
-  letter-spacing:.15px;
-  animation:liveWarningRoll 18s linear infinite;
-  will-change:transform;
-}
-.live-warning-track span{
-  display:inline-block;
-  padding-right:110px;
-}
-.live-warning-track strong{color:var(--red)}
-.live-warning-side{
-  position:relative;
-  z-index:2;
-  min-width:145px;
-  height:100%;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding:0 12px;
-  border-left:1px solid rgba(248,81,73,.22);
-  background:rgba(248,81,73,.08);
-  color:var(--red);
-  font-size:9px;
-  font-weight:800;
-  letter-spacing:.45px;
-}
-@keyframes liveWarningRoll{
-  0%{transform:translateX(0)}
-  100%{transform:translateX(-50%)}
-}
-@keyframes liveDotPulse{
-  0%{box-shadow:0 0 0 0 rgba(248,81,73,.65);opacity:1}
-  70%{box-shadow:0 0 0 7px rgba(248,81,73,0);opacity:.75}
-  100%{box-shadow:0 0 0 0 rgba(248,81,73,0);opacity:1}
-}
-@media(max-width:650px){
-  .live-warning-side{display:none}
-  .live-warning-badge{min-width:70px;padding:0 9px}
-  .live-warning-track{font-size:10px}
-}
+#liveLabel{display:inline-flex;align-items:center;gap:5px}
+.exec-toggle.live-active #liveLabel.active{background:var(--panel2);color:var(--red);box-shadow:inset 0 0 0 1px var(--red)}
+.live-mode-dot{display:none;width:9px;height:9px;border-radius:50%;background:var(--red);flex-shrink:0}
+#liveLabel.active .live-mode-dot{display:inline-block;animation:liveDotBlink 1.6s steps(1,end) infinite}
+@keyframes liveDotBlink{0%,100%{opacity:1}50%{opacity:0}}
+/* Explicit on/off mode indicator requested; retain blinking in reduced-motion mode. */
+.monitor-summary{display:flex;flex-wrap:wrap;gap:6px 20px;margin:0 0 12px;color:var(--muted);font-size:11px}
+.monitor-summary b{color:var(--text);margin-left:6px;overflow-wrap:anywhere}
 .sl-note{padding:7px 9px;margin-bottom:11px;background:var(--panel2);border:1px solid var(--border);border-radius:6px}
 .actions{display:flex;flex-wrap:wrap;gap:2px}.actions button{margin-right:4px}.safety-card{padding:11px;background:var(--panel2);border:1px solid var(--border);border-radius:7px;margin-top:10px}.safety-title{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}.safety-state{font-size:10px;font-weight:700}.safety-actions{display:flex;flex-wrap:wrap;gap:4px}.safety-actions button{margin:0}.safety-note{font-size:10px;color:var(--muted);margin-top:7px}.manual-order-card{padding:11px;background:var(--panel2);border:1px solid var(--border);border-radius:7px;margin-top:10px}.manual-form{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr;gap:8px;align-items:end}.manual-actions{display:flex;gap:5px;flex-wrap:wrap}.manual-actions button{margin:0}.manual-note{font-size:10px;color:var(--muted);margin-top:7px}
 .status-line{margin-top:7px;min-height:15px}
@@ -186,14 +94,126 @@ button{padding:7px 11px;border:0;border-radius:6px;cursor:pointer;margin:6px 5px
 .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.52);display:none;align-items:center;justify-content:center;padding:18px;z-index:100}
 .modal-backdrop.open{display:flex}.backtest-modal{width:min(760px,100%);max-height:90vh;overflow:auto;background:var(--panel);border:1px solid var(--border);border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.3);padding:16px}.backtest-form{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.quick-ranges{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}.quick-ranges button{margin:0;transition:all .15s ease}.quick-ranges button.active{background:var(--blue);color:#fff;border-color:var(--blue);box-shadow:0 0 0 2px rgba(56,139,253,.14)}
 .action-feedback{animation:actionFeedback .35s ease-out}.action-success{box-shadow:0 0 0 2px rgba(46,160,67,.22);transform:translateY(-1px)}.action-busy{opacity:.72;cursor:wait}@keyframes actionFeedback{0%{transform:scale(.97)}60%{transform:scale(1.03)}100%{transform:scale(1)}}.backtest-results{margin-top:14px}.backtest-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.bt-metric{padding:9px;background:var(--panel2);border:1px solid var(--border);border-radius:7px}.bt-metric span{display:block;color:var(--muted);font-size:9px}.bt-metric b{display:block;margin-top:4px;font-size:13px}.backtest-table{width:100%;border-collapse:collapse;margin-top:12px;font-size:10px}.backtest-table th,.backtest-table td{padding:7px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}.backtest-table th{color:var(--muted);font-weight:600}.backtest-error{color:var(--red);font-size:11px;margin-top:8px}@media(max-width:900px){.backtest-form{grid-template-columns:1fr 1fr 1fr}.backtest-metrics{grid-template-columns:1fr 1fr}}@media(max-width:650px){.backtest-form,.backtest-metrics{grid-template-columns:1fr 1fr}}
-''</style>
+#accountBox{display:flex;flex-wrap:wrap;gap:4px 12px;overflow-wrap:anywhere}
+#accountBox b{color:var(--text)}
+.broker-top{margin:0 0 14px;padding:10px 14px}
+.broker-top .broker-header,.broker-top .broker-identity{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.broker-top .broker-header{gap:10px 14px;min-height:34px}
+.broker-top .broker-identity{flex-shrink:0}
+.broker-top .broker-header button{margin:0;white-space:nowrap}
+.broker-top #accountBox{flex:1;gap:5px 14px;line-height:1.5}
+.broker-top #accountBox span{white-space:nowrap}
+.broker-top #brokerToggle{margin-left:auto;flex-shrink:0}
+.broker-top.collapsed .broker-header > :not(.broker-identity):not(#brokerToggle),.broker-top.collapsed .broker-settings{display:none}
+.broker-top .broker-settings{padding-top:12px;margin-top:10px;border-top:1px solid var(--border)}
+.broker-top .broker-settings .grid{max-width:720px}
+.broker-top #brokerMsg:empty{display:none}
+@media(max-width:650px){.broker-top .grid{grid-template-columns:1fr}.broker-top #accountBox{flex-basis:100%}.broker-top .broker-identity{gap:6px}}
+.strategy-setup-section{margin:10px 0;padding:10px;border:1px solid var(--border);border-radius:7px;background:var(--panel2)}
+.strategy-setup-section[hidden]{display:none}
+.strategy-setup-section > summary{cursor:pointer;color:var(--text);font-size:12px}
+.strategy-setup-section > summary h3{display:inline;font-size:12px;margin:0}
+.strategy-setup-section > summary:focus-visible{outline:2px solid var(--blue);outline-offset:4px;border-radius:3px}
+.strategy-setup-section[open]>summary{margin-bottom:10px}
+.strategy-setup-summary{display:block;margin:4px 0 0 14px}
+.strategy-symbol-input{grid-column:1 / -1}
+.strategy-input-grid,.strategy-setup-section .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.strategy-setup-section #pobConfig,.strategy-setup-section #timingConfig{margin-top:10px}
+.strategy-setup-section [id$="TargetWrap"]{margin-top:10px}
+.strategy-setup-section label{margin-bottom:4px}
+.strategy-setup-section input,.strategy-setup-section select{min-width:0}
+.strategy-setup-section #pobPreview{font-size:10px}
+@media(max-width:380px){.strategy-input-grid,.strategy-setup-section .grid{grid-template-columns:1fr}}
+input:disabled,select:disabled{opacity:.65;cursor:not-allowed}
+.live-signals-card>summary{cursor:pointer;list-style:none;margin-bottom:0}
+.live-signals-card>summary::-webkit-details-marker{display:none}
+.live-signals-card[open]>summary{margin-bottom:12px}
+.live-signals-card>summary:focus-visible{outline:2px solid var(--blue);outline-offset:4px;border-radius:4px}
+.live-signals-actions{display:flex;align-items:center;gap:10px}
+.live-signals-arrow{font-size:11px;transition:transform .15s}
+.live-signals-card[open] .live-signals-arrow{transform:rotate(90deg)}
+.topbar{height:auto;min-height:48px;gap:12px;flex-wrap:wrap}
+.top-actions{flex-wrap:wrap;justify-content:flex-end;gap:8px}
+.top-actions button{margin:0}
+@media(max-width:760px){.top-actions{justify-content:flex-start}.topbar .brand{flex-basis:100%}}
+#botPill.is-running{animation:runningBlink 1.4s steps(1,end) infinite;font-weight:700}
+@keyframes runningBlink{
+  0%,100%{color:var(--green)}
+  50%{color:transparent}
+}
+@media(prefers-reduced-motion:reduce){#botPill.is-running{animation:none;color:var(--green)}}
+.strategy-setup-section>.strategy-input-grid{grid-template-columns:1.2fr 1fr .85fr;align-items:end}
+.strategy-setup-section>.strategy-input-grid .strategy-symbol-input{grid-column:auto}
+.strategy-setup-section input,.strategy-setup-section select{height:34px}
+#timingSettings #timingTargetWrap{margin-top:0}
+#timingSettings #timingConfig,#timing2Settings #timing2Config{margin-bottom:0!important;align-items:end}
+@media(max-width:380px){.strategy-setup-section>.strategy-input-grid{grid-template-columns:1.2fr 1fr .85fr}#timingSettings #timingConfig,#timing2Settings #timing2Config{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.log-grid,.log-card,.log{min-width:0}
+.trade-table-scroll{overflow-x:auto;max-width:100%}
+.trade-table{width:100%;border-collapse:collapse;min-width:700px;font-size:12px}
+.trade-table th,.trade-table td{padding:5px 7px;text-align:right;border-bottom:1px solid var(--border);white-space:nowrap}
+.trade-table th{color:var(--muted);font-weight:500}
+.trade-table th:first-child,.trade-table td:first-child,.trade-table th:nth-child(2),.trade-table td:nth-child(2){text-align:left}
+.trade-table .trade-detail td{text-align:left;white-space:normal;background:var(--panel2);line-height:1.7}
+.trade-detail-content{display:flex;gap:6px 22px;flex-wrap:wrap}
+.trade-table button{margin:0}
+.log-chevron{width:16px;height:16px;display:block;margin:auto;transform:rotate(0deg);transition:transform .16s ease}
+.log-chevron.is-open{transform:rotate(90deg)}
+.trade-log-section .icon-btn,.log-card-toggle{border-color:transparent;background:transparent;border-radius:6px}
+.trade-log-section .icon-btn:hover,.log-card-toggle:hover{background:var(--panel2);border-color:var(--border)}
+.trade-log-section button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){.log-chevron{transition:none}}
+
+.trade-log-section{padding:12px}
+.trade-log-section .log-grid{gap:8px}
+.trade-log-section .log-card{padding:8px 10px}
+.trade-log-section .log-card .section-title{margin-bottom:4px}
+.trade-table .icon-btn{width:24px;height:24px;padding:3px}
+.trade-table .trade-detail td{padding:6px 8px;font-size:11px}
+.trade-detail-content{gap:4px 16px}
+
+.brand-broker{display:flex;align-items:center;gap:16px;flex-wrap:wrap;min-width:0}
+.broker-compact{display:inline-flex;align-items:center;gap:7px;margin:0;padding:6px 9px;background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:11px;white-space:nowrap}
+.broker-compact-dot{width:6px;height:6px;border-radius:50%;background:var(--red)}
+.broker-top.collapsed{display:none}
+@media(max-width:760px){.brand-broker{gap:8px;flex-basis:100%}.brand-broker .brand{flex-basis:auto}}
+
+:root{--connected-bg:#123322;--connected-text:#8ce4a3;--connected-border:#359957}
+:root[data-theme="light"]{--connected-bg:#eaf6ec;--connected-text:#176b30;--connected-border:#218739}
+.broker-compact.is-connected,#mt5Pill.is-connected{background:var(--connected-bg);border:1px solid var(--connected-border);color:var(--connected-text)!important;font-weight:700}
+.broker-compact.is-connected .broker-compact-dot{display:inline-grid;place-items:center;width:18px;height:18px;background:#218739!important;color:white;font-size:13px;font-weight:800;line-height:1}
+#mt5Pill.is-connected::before{content:"✓";display:inline-grid;place-items:center;width:15px;height:15px;margin-right:5px;border-radius:50%;background:#218739;color:white;font-size:11px}
+</style>
 </head>
 <body>
 <div class="wrap">
   <div class="topbar">
-    <div class="brand"><div class="logo">C</div><div><h1>Chandra Trading</h1><div class="muted">Algorithmic Trading Control Center</div></div></div>
-    <div class="top-actions"><button class="backtest-btn" onclick="openBacktest()">BACKTEST</button><span id="botPill" class="pill">STOPPED</span><button id="themeBtn" class="theme-btn" title="Toggle light / dark mode" onclick="toggleTheme()">☀</button></div>
+    <div class="brand-broker"><div class="brand"><div class="logo">C</div><div><h1>Chandra Trading</h1><div class="muted">Algorithmic Trading Control Center</div></div></div><button id="brokerCompact" class="broker-compact" onclick="toggleBroker()" aria-expanded="false" aria-controls="brokerSection"><span id="brokerCompactDot" class="broker-compact-dot" aria-hidden="true"></span><span>Equiti MT5 · <span id="brokerCompactStatus">Disconnected</span></span><span id="brokerCompactChevron" aria-hidden="true"></span></button></div>
+    <div class="top-actions"><button class="backtest-btn" onclick="openBacktest()">BACKTEST</button><div class="exec-toggle" id="execToggle">
+              <label id="paperLabel" class="active"><input type="radio" name="mode" value="paper" checked onchange="modeChanged()">PAPER</label>
+              <label id="liveLabel"><input type="radio" name="mode" value="live" onchange="modeChanged()"><span class="live-mode-dot" aria-hidden="true"></span>LIVE</label>
+            </div><span id="botPill" class="pill">STOPPED</span><span class="pill refresh-indicator" title="Dashboard updates every second">↻ 1 sec</span><button id="themeBtn" class="theme-btn" title="Toggle light / dark mode" onclick="toggleTheme()">☀</button></div>
   </div>
+
+  <section class="card broker-top" id="brokerSection" aria-label="Broker connection">
+    <div class="broker-header">
+      <div class="broker-identity"><h2>Broker — Equiti MT5</h2><span id="mt5Pill" class="pill">DISCONNECTED</span></div>
+      <button class="secondary" aria-expanded="false" aria-controls="brokerSettings" onclick="const panel=document.getElementById('brokerSettings');panel.hidden=!panel.hidden;this.setAttribute('aria-expanded',String(!panel.hidden))">Connection settings</button>
+      <button class="secondary" onclick="testMT5()">Test MT5</button>
+      <div id="accountBox" class="muted" aria-live="polite"></div>
+      <button class="icon-btn" id="brokerToggle" onclick="toggleBroker()" aria-expanded="true" aria-controls="accountBox brokerSettings" aria-label="Collapse broker section" title="Collapse broker section">▼</button>
+    </div>
+    <div id="brokerSettings" class="broker-settings" hidden>
+      <div class="grid">
+        <div><label for="mt5Login">MT5 Login</label><input id="mt5Login"></div>
+        <div><label for="mt5Server">MT5 Server</label><input id="mt5Server"></div>
+        <div><label for="mt5Password">MT5 Password</label><input id="mt5Password" type="password"></div>
+      </div>
+      <button class="primary" onclick="saveBroker()">Save Encrypted Credentials</button>
+    </div>
+    <div id="brokerMsg" class="muted status-line" role="status"></div>
+  </section>
 
   <div class="layout" id="mainLayout">
     <button class="sidebar-expand-btn" onclick="toggleSidebar(true)" title="Show configuration">›</button>
@@ -208,41 +228,43 @@ button{padding:7px 11px;border:0;border-radius:6px;cursor:pointer;margin:6px 5px
       </div>
 
       <div class="card">
-        <div class="section-title"><h2>Broker — Equiti MT5</h2><span id="mt5Pill" class="pill">DISCONNECTED</span></div>
-        <div class="grid">
-          <div><label>MT5 Login</label><input id="mt5Login"></div>
-          <div><label>MT5 Server</label><input id="mt5Server"></div>
-          <div><label>MT5 Password</label><input id="mt5Password" type="password"></div>
-        </div>
-        <div class="actions">
-          <button class="primary" onclick="saveBroker()">Save Encrypted Credentials</button>
-          <button class="secondary" onclick="testMT5()">Test MT5</button>
-        </div>
-        <div id="brokerMsg" class="muted status-line"></div>
-        <div id="accountBox" class="muted" style="margin-top:8px"></div>
-      </div>
-
-      <div class="card">
         <div class="section-title"><h2>Engine Configuration</h2><span id="modePill" class="pill">BUY / SELL</span></div>
-        <div class="sl-note muted">Initial / trailing Stop Loss: ± 5 points</div>
         <div class="grid">
-          <div><label>Symbol</label><input id="symbol" value="XAUUSD"></div>
-          <div><label>Timeframe</label><select id="timeframe"><option>M1</option><option>M3</option><option>M5</option><option>M15</option></select></div>
-          <div><label>Lot Size</label><input id="lot" type="number" step="0.01" value="0.01"></div>
+          <div hidden><label>Symbol</label><input id="symbol" value="XAUUSD"></div>
+          <div hidden><label>Timeframe</label><select id="timeframe"><option>M1</option><option>M3</option><option>M5</option><option>M15</option></select></div>
+          <div hidden><label>Lot Size</label><input id="lot" type="number" step="0.01" value="0.01"></div>
         </div>
         <label style="margin-top:12px">Strategies</label>
         <div class="strategy-row">
           <label><input type="checkbox" name="strategy" value="strategic" onchange="strategyChanged()"> Strategic Entry</label>
           <label><input type="checkbox" name="strategy" value="magical" onchange="strategyChanged()"> Trap Candles</label>
-          <label><input type="checkbox" name="strategy" value="timing" onchange="strategyChanged()"> Timing Candle</label>
+          <label><input type="checkbox" name="strategy" value="timing" onchange="strategyChanged()"> <span title="Significant Time Candle A">STC A</span></label>
+          <label><input type="checkbox" name="strategy" value="timing2" onchange="strategyChanged()"> <span title="Significant Time Candle B">STC B</span></label>
+          <label><input type="checkbox" name="strategy" value="pob" onchange="strategyChanged()"> POB</label>
         </div>
-        <div id="timingConfig" class="grid" style="display:none;margin-bottom:10px"><div><label>Start Time (MT5 Chart)</label><input id="timingStartTime" type="time" value="04:00"></div><div><label>End Time (MT5 Chart)</label><input id="timingEndTime" type="time" value="08:00"></div></div>
-        <div id="strategyTargetConfig" class="grid" style="margin-bottom:10px"><div id="strategicTargetWrap"><label>Strategic Target Points (Optional)</label><input id="strategicTargetPoints" type="number" min="0" step="0.01" placeholder="Continue without target"></div><div id="magicalTargetWrap"><label>Trap Candle Target Points (Optional)</label><input id="magicalTargetPoints" type="number" min="0" step="0.01" placeholder="Continue without target"></div><div id="timingTargetWrap"><label>Timing Candle Target Points (Optional)</label><input id="timingTargetPoints" type="number" min="0" step="0.01" placeholder="Continue without target"></div></div>
+        <div id="strategySettings">
+          <details open id="strategicSettings" class="strategy-setup-section" hidden aria-labelledby="strategicSetupTitle"><summary><h3 id="strategicSetupTitle">Strategic Entry</h3><span class="muted strategy-setup-summary" id="strategicSetupSummary"></span></summary><div class="strategy-input-grid"><div class="strategy-symbol-input"><label for="strategicSymbol">Symbol</label><input id="strategicSymbol" value="XAUUSD"></div><div><label for="strategicTimeframe">Timeframe</label><select id="strategicTimeframe"><option>M1</option><option>M3</option><option>M5</option><option>M15</option></select></div><div><label for="strategicLot">Lot size</label><input id="strategicLot" type="number" min="0.01" step="0.01" value="0.01"></div></div><div id="strategicTargetWrap"><label>Strategic Target Points (Optional)</label><input id="strategicTargetPoints" type="number" min="0" step="0.01" placeholder="Continue without target"></div></details>
+          <details open id="magicalSettings" class="strategy-setup-section" hidden aria-labelledby="magicalSetupTitle"><summary><h3 id="magicalSetupTitle">Trap Candles</h3><span class="muted strategy-setup-summary" id="magicalSetupSummary"></span></summary><div class="strategy-input-grid"><div class="strategy-symbol-input"><label for="magicalSymbol">Symbol</label><input id="magicalSymbol" value="XAUUSD"></div><div><label for="magicalTimeframe">Timeframe</label><select id="magicalTimeframe"><option>M1</option><option>M3</option><option>M5</option><option>M15</option></select></div><div><label for="magicalLot">Lot size</label><input id="magicalLot" type="number" min="0.01" step="0.01" value="0.01"></div></div><div id="magicalTargetWrap"><label>Trap Candle Target Points (Optional)</label><input id="magicalTargetPoints" type="number" min="0" step="0.01" placeholder="Continue without target"></div></details>
+          <details open id="timingSettings" class="strategy-setup-section" hidden aria-labelledby="timingSetupTitle"><summary><h3 id="timingSetupTitle">STC A</h3><span class="muted strategy-setup-summary" id="timingSetupSummary"></span></summary><p class="muted" style="margin:6px 0">Significant Time Candle A</p><div class="strategy-input-grid"><div class="strategy-symbol-input"><label for="timingSymbol">Symbol</label><input id="timingSymbol" value="XAUUSD"></div><div><label for="timingTimeframe">Timeframe</label><select id="timingTimeframe"><option>M1</option><option>M3</option><option>M5</option><option>M15</option></select></div><div><label for="timingLot">Lot size</label><input id="timingLot" type="number" min="0.01" step="0.01" value="0.01"></div></div><div id="timingConfig" class="grid" style="display:none;margin-bottom:10px"><div><label>Start Time (MT5 Chart)</label><input id="timingStartTime" type="time" value="04:00"></div><div><label>End Time (MT5 Chart)</label><input id="timingEndTime" type="time" value="08:00" title="At this MT5 chart time, close STC A positions and block entries for the rest of the day"></div><div><label for="timingEntryMode">Entry mode</label><select id="timingEntryMode" title="Without retest enters on live price crossing the STC A high or low"><option value="retest">Retest</option><option value="direct">Without retest</option></select></div><div id="timingTargetWrap"><label for="timingTargetPoints">Target points</label><input id="timingTargetPoints" title="Optional target points; leave blank for no target" type="number" min="0" step="0.01" placeholder="Continue without target"></div></div></details>
+          <details open id="timing2Settings" class="strategy-setup-section" hidden aria-labelledby="timing2SetupTitle"><summary><h3 id="timing2SetupTitle">STC B</h3><span class="muted strategy-setup-summary" id="timing2SetupSummary"></span></summary><p class="muted" style="margin:6px 0">Significant Time Candle B</p><div class="strategy-input-grid"><div class="strategy-symbol-input"><label for="timing2Symbol">Symbol</label><input id="timing2Symbol" value="XAGUSD"></div><div><label for="timing2Timeframe">Timeframe</label><select id="timing2Timeframe"><option>M1</option><option>M3</option><option>M5</option><option>M15</option></select></div><div><label for="timing2Lot">Lot size</label><input id="timing2Lot" type="number" min="0.01" step="0.01" value="0.01"></div></div><div id="timing2Config" class="grid" style="display:none;margin-bottom:10px"><div><label>Start Time (MT5 Chart)</label><input id="timing2StartTime" type="time" value="04:00"></div><div><label>End Time (MT5 Chart)</label><input id="timing2EndTime" type="time" value="08:00" title="At this MT5 chart time, close STC B positions and block entries for the rest of the day"></div><div><label for="timing2EntryMode">Entry mode</label><select id="timing2EntryMode" title="Without retest enters on live price crossing the STC B high or low"><option value="retest">Retest</option><option value="direct">Without retest</option></select></div><div id="timing2TargetWrap"><label for="timing2TargetPoints">Target points</label><input id="timing2TargetPoints" title="Optional target points; leave blank for no target" type="number" min="0" step="0.01" placeholder="Continue without target"></div></div></details>
+          <details open id="pobSettings" class="strategy-setup-section" hidden aria-labelledby="pobSetupTitle"><summary><h3 id="pobSetupTitle">POB</h3><span class="muted strategy-setup-summary" id="pobSetupSummary"></span></summary><div class="strategy-input-grid"><div class="strategy-symbol-input"><label for="pobSymbol">Symbol</label><input id="pobSymbol" value="XAUUSD"></div><div><label for="pobTimeframe">Timeframe</label><select id="pobTimeframe"><option>M1</option><option>M3</option><option>M5</option><option>M15</option></select></div><div><label for="pobLot">Lot size</label><input id="pobLot" type="number" min="0.01" step="0.01" value="0.01"></div></div><div id="pobConfig" style="display:none;margin-bottom:10px">
+          <div class="grid"><div><label for="pobLevelSource">High / Low source</label><select id="pobLevelSource" onchange="updatePOBSource()"><option value="manual">Manual</option><option value="candle">Timing candle</option></select></div><div id="pobCandleTimeWrap" hidden><label for="pobCandleTime">Candle start (MT5 chart)</label><input id="pobCandleTime" type="time" value="04:00"><small>Uses POB's symbol and timeframe after the candle closes.</small></div></div>
+          <div id="pobCandleMessage" class="muted" role="status"></div>
+          <div class="grid"><div><label for="pobHigh">POB Selected High</label><input id="pobHigh" type="number" min="0" step="any" oninput="previewPOB()"></div><div><label for="pobLow">POB Selected Low</label><input id="pobLow" type="number" min="0" step="any" oninput="previewPOB()"></div><div><label for="pobEntryMode">POB Entry Mode</label><select id="pobEntryMode"><option value="retest">Retest</option><option value="direct">Without retest</option></select></div><div><label for="pobSlMode">POB Stop-loss</label><select id="pobSlMode" onchange="previewPOB()"><option value="levels" selected>Buy / Sell levels — opposite entry</option><option value="default">Calculated stop-loss</option></select></div></div>
+          <div id="pobPreview" style="overflow:auto;margin-top:8px"></div>
+          <details id="pobRules" class="muted" style="margin-top:10px;line-height:1.5">
+            <summary style="cursor:pointer">POB stop-loss &amp; exit rules</summary>
+          <p class="muted">Buy / Sell levels: BUY SL = Sell entry; SELL SL = Buy entry. Default keeps the current calculated stop.</p>
+          <p class="muted">T2: close 50% if both halves meet broker volume rules, then move SL to strategy entry. If the volume cannot split, keep the full position and move SL to entry. Exit remaining volume at T3 or SL. Live POB requires an MT5 hedging account. Keep the app running for T2 management.</p>
+          </details>
+        </div></details>
+        </div>
         <div class="actions">
-          <button class="primary" onclick="configure()">Save Configuration</button>
+          <button class="primary" id="configureBtn" onclick="configure().catch(()=>{})">Save Configuration</button>
           <button class="primary" onclick="startBot()">START BOT</button>
           <button class="danger" onclick="stopBot()">STOP BOT</button>
         </div>
+        <div id="configError" role="alert" style="color:var(--red);margin-top:8px" hidden></div>
         <div id="status" class="muted status-line"></div>
       </div>
     </aside>
@@ -251,34 +273,18 @@ button{padding:7px 11px;border:0;border-radius:6px;cursor:pointer;margin:6px 5px
       <div class="card">
         <div class="section-title monitor-title-row">
           <div><h2>Trading Monitor</h2><div class="muted">Live engine state and execution</div></div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <div class="exec-toggle" id="execToggle">
-              <label id="paperLabel" class="active"><input type="radio" name="mode" value="paper" checked onchange="modeChanged()">PAPER</label>
-              <label id="liveLabel"><input type="radio" name="mode" value="live" onchange="modeChanged()">LIVE</label>
-            </div>
-            <span class="pill">1 sec refresh</span>
-          </div>
         </div>
-        <div id="liveWarning" class="live-warning">
-  <div class="live-warning-badge"><span class="live-warning-dot"></span>LIVE</div>
-  <div class="live-warning-viewport">
-    <div id="liveWarningTrack" class="live-warning-track">
-      <span>⚠ LIVE TRADING ENABLED — real orders can be sent to the connected MT5 server.</span>
-      <span aria-hidden="true">⚠ LIVE TRADING ENABLED — real orders can be sent to the connected MT5 server.</span>
-    </div>
-  </div>
-  <div class="live-warning-side">REAL ORDERS ENABLED</div>
-</div>
-        <div class="monitor-head">
-          <div class="metric"><span>MODE</span><b id="monitorMode">PAPER</b></div>
-          <div class="metric"><span>STRATEGIES</span><b id="monitorStrategy">NONE</b></div>
-          <div class="metric"><span>SYMBOL</span><b id="monitorSymbol">XAUUSD</b></div>
+        <div class="monitor-summary">
+          <span>Strategies <b id="monitorStrategy">NONE</b></span>
+          <span>Symbols <b id="monitorSymbol">—</b></span>
         </div>
         <div class="combined-pnl">
           <div class="row"><span>Strategic Run P&L</span><b id="strategicPnl">0.00</b></div>
           <div class="row"><span>Trap Candles Run P&L</span><b id="magicalPnl">0.00</b></div>
-          <div class="row"><span>Timing Run P&L</span><b id="timingPnl">0.00</b></div>
-          <div class="row combined-total"><strong>Combined Run P&L</strong><strong id="combinedPnl">0.00</strong></div>
+          <div class="row"><span>STC A Run P&L</span><b id="timingPnl">0.00</b></div>
+          <div class="row"><span>STC B Run P&L</span><b id="timing2Pnl">0.00</b></div>
+          <div class="row"><span>POB Run P&amp;L</span><b id="pobPnl">0.00</b></div>
+          <div class="row combined-total"><strong title="Saved closed trades across all strategies plus current open P&amp;L, for the selected Live/Paper mode. Clearing logs resets the saved portion.">Overall P&amp;L</strong><strong id="combinedPnl">0.00</strong></div>
         </div>
         <div class="strategy-status-grid" id="strategyStatusGrid"></div>
         <div class="safety-bar">
@@ -291,8 +297,8 @@ button{padding:7px 11px;border:0;border-radius:6px;cursor:pointer;margin:6px 5px
         </div>
       </div>
 
-      <div class="card">
-        <div class="section-title"><h2>Live Signals</h2><span id="signalPill" class="pill">ENGINE</span></div>
+      <details class="card live-signals-card" id="liveSignalsCard">
+        <summary class="section-title"><h2>Live Signals</h2><span class="live-signals-actions"><span id="signalPill" class="pill">ENGINE</span><span class="live-signals-arrow" aria-hidden="true">▶</span></span></summary>
         <div class="signal">
           <div class="sig">BUY CONDITION<b id="buyCondition">—</b></div>
           <div class="sig">SELL CONDITION<b id="sellCondition">—</b></div>
@@ -300,20 +306,24 @@ button{padding:7px 11px;border:0;border-radius:6px;cursor:pointer;margin:6px 5px
           <div class="sig">STRATEGIC SELL<b id="strategicSell">—</b></div>
           <div class="sig">MAGICAL BUY<b id="magicalBuy">—</b></div>
           <div class="sig">MAGICAL SELL<b id="magicalSell">—</b></div>
-          <div class="sig">TIMING BUY<b id="timingBuy">—</b></div>
-          <div class="sig">TIMING SELL<b id="timingSell">—</b></div>
+          <div class="sig">STC A BUY<b id="timingBuy">—</b></div>
+          <div class="sig">STC B BUY<b id="timing2Buy">—</b></div>
+          <div class="sig">STC A SELL<b id="timingSell">—</b></div>
+          <div class="sig">STC B SELL<b id="timing2Sell">—</b></div>
           <div class="sig">TRIGGERED<b id="triggered">—</b></div>
           <div class="sig">STOP LOSS LEVEL<b id="l100">—</b></div>
           <div class="sig">CURRENT SL<b id="currentSl">—</b></div>
         </div>
-      </div>
+      </details>
 
       <div class="card trade-log-section" id="tradeLogSection">
-        <div class="section-title trade-log-header"><h2>Trade Logs</h2><div class="trade-log-actions"><span class="pill">MT5 chart time</span><span class="pill">Separated by strategy</span><button class="icon-btn" id="tradeLogToggle" onclick="toggleTradeLogs()" aria-label="Collapse trade logs" title="Collapse trade logs">▼</button></div></div>
+        <div class="section-title trade-log-header"><h2>Trade Logs</h2><div class="trade-log-actions"><span class="pill">MT5 chart time</span><span class="pill">Separated by strategy</span><button class="secondary" onclick="clearTradeLogs()" title="Delete saved trade logs from trade_history.json">Clear logs</button><button class="icon-btn" id="tradeLogToggle" onclick="toggleTradeLogs()" aria-label="Collapse trade logs" title="Collapse trade logs">▼</button></div></div>
         <div class="log-grid" id="tradeLogContent">
           <div class="log-card" id="strategicLogCard"><div class="section-title"><h2>Strategic Entry</h2><div class="log-card-actions"><span id="strategicLogPill" class="pill">P&L 0.00</span><button class="log-card-toggle" id="strategicLogToggle" onclick="toggleStrategyLog('strategic')" aria-label="Collapse Strategic Entry log" title="Collapse Strategic Entry log">▼</button></div></div><div id="strategicTradeLog" class="log"><div class="empty">No trades yet.</div></div></div>
           <div class="log-card" id="magicalLogCard"><div class="section-title"><h2>Trap Candles</h2><div class="log-card-actions"><span id="magicalLogPill" class="pill">P&L 0.00</span><button class="log-card-toggle" id="magicalLogToggle" onclick="toggleStrategyLog('magical')" aria-label="Collapse Trap Candles log" title="Collapse Trap Candles log">▼</button></div></div><div id="magicalTradeLog" class="log"><div class="empty">No trades yet.</div></div></div>
-          <div class="log-card" id="timingLogCard"><div class="section-title"><h2>Timing Candle</h2><div class="log-card-actions"><span id="timingLogPill" class="pill">P&L 0.00</span><button class="log-card-toggle" id="timingLogToggle" onclick="toggleStrategyLog('timing')" aria-label="Collapse Timing Candle log" title="Collapse Timing Candle log">▼</button></div></div><div id="timingTradeLog" class="log"><div class="empty">No trades yet.</div></div></div>
+          <div class="log-card" id="timingLogCard"><div class="section-title"><h2>STC A</h2><div class="log-card-actions"><span id="timingLogPill" class="pill">P&L 0.00</span><button class="log-card-toggle" id="timingLogToggle" onclick="toggleStrategyLog('timing')" aria-label="Collapse STC A log" title="Collapse STC A log">▼</button></div></div><div id="timingTradeLog" class="log"><div class="empty">No trades yet.</div></div></div>
+          <div class="log-card" id="timing2LogCard"><div class="section-title"><h2>STC B</h2><div class="log-card-actions"><span id="timing2LogPill" class="pill">P&L 0.00</span><button class="log-card-toggle" id="timing2LogToggle" onclick="toggleStrategyLog('timing2')" aria-label="Collapse STC B log" title="Collapse STC B log">▼</button></div></div><div id="timing2TradeLog" class="log"><div class="empty">No trades yet.</div></div></div>
+          <div class="log-card" id="pobLogCard"><div class="section-title"><h2>POB</h2><div class="log-card-actions"><span id="pobLogPill" class="pill">P&L 0.00</span><button class="log-card-toggle" id="pobLogToggle" onclick="toggleStrategyLog('pob')" aria-label="Collapse POB log" title="Collapse POB log">▼</button></div></div><div id="pobTradeLog" class="log"><div class="empty">No trades yet.</div></div></div>
         </div>
       </div>
     </main>
@@ -324,7 +334,7 @@ button{padding:7px 11px;border:0;border-radius:6px;cursor:pointer;margin:6px 5px
   <div class="backtest-modal">
     <div class="section-title"><div><h2 id="btTitle">Strategic Entry — Backtest</h2><div id="btDescription" class="muted">Fib 3 Strategic Entry • Signal candle High/Low exit • ± 5 point safety protection</div></div><button class="icon-btn" onclick="closeBacktest()">✕</button></div>
     <div class="backtest-form">
-      <div><label>Strategy</label><select id="btStrategy" onchange="updateBacktestStrategy()"><option value="strategic">Strategic Entry</option><option value="timing">Timing Candle</option></select></div>
+      <div><label>Strategy</label><select id="btStrategy" onchange="updateBacktestStrategy()"><option value="strategic">Strategic Entry</option><option value="timing">STC A</option></select></div>
       <div><label>Instrument</label><input id="btSymbol" type="text" value="XAUUSD.sd" placeholder="MT5 symbol, e.g. XAUUSD.sd"></div>
       <div><label>Timeframe</label><select id="btTimeframe"><option value="M1">M1</option><option value="M3">M3</option><option value="M5">M5</option><option value="M15">M15</option><option value="M30">M30</option><option value="H1">H1</option><option value="H4">H4</option><option value="D1">D1</option></select></div>
       <div><label>From Date</label><input id="btFrom" type="date"></div>
@@ -343,24 +353,82 @@ button{padding:7px 11px;border:0;border-radius:6px;cursor:pointer;margin:6px 5px
 </div>
 
 <script>
+const uiStatus=document.getElementById("status");
 const root=document.documentElement;
 const layout=document.getElementById("mainLayout");
 function setSidebar(collapsed,save=true){if(!layout)return;layout.classList.toggle("sidebar-collapsed",collapsed);if(save)localStorage.setItem("chandra-sidebar-collapsed",collapsed?"1":"0")}
 function toggleSidebar(show){setSidebar(!show)}
 (function(){setSidebar(localStorage.getItem("chandra-sidebar-collapsed")==="1",false)})();
-function setTradeLogsCollapsed(collapsed,save=true){const section=document.getElementById("tradeLogSection");const btn=document.getElementById("tradeLogToggle");if(!section||!btn)return;section.classList.toggle("collapsed",collapsed);btn.textContent=collapsed?"▲":"▼";btn.title=collapsed?"Expand trade logs":"Collapse trade logs";btn.setAttribute("aria-label",collapsed?"Expand trade logs":"Collapse trade logs");if(save)localStorage.setItem("chandra-trade-logs-collapsed",collapsed?"1":"0")}
+function setBrokerCollapsed(collapsed,save=true){
+  const section=document.getElementById("brokerSection"),button=document.getElementById("brokerToggle");
+  section.classList.toggle("collapsed",collapsed);
+  button.innerHTML=logChevron(!collapsed);
+  const compact=document.getElementById("brokerCompact");
+  compact.setAttribute("aria-expanded",String(!collapsed));
+  compact.title=(collapsed?"Expand":"Collapse")+" broker details";
+  document.getElementById("brokerCompactChevron").innerHTML=logChevron(!collapsed);
+  button.setAttribute("aria-expanded",String(!collapsed));
+  button.title=(collapsed?"Expand":"Collapse")+" broker section";
+  button.setAttribute("aria-label",button.title);
+  if(save){try{localStorage.setItem("chandra-broker-collapsed",collapsed?"1":"0")}catch(e){}}
+}
+function toggleBroker(){setBrokerCollapsed(!document.getElementById("brokerSection").classList.contains("collapsed"))}
+try{setBrokerCollapsed(localStorage.getItem("chandra-broker-collapsed")!=="0",false)}catch(e){}
+function logChevron(expanded){return `<svg class="log-chevron${expanded?" is-open":""}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>`}
+function displayInstrument(symbol){return String(symbol||"—").replace(/\.[A-Za-z0-9_-]+$/,"")}
+function setTradeLogsCollapsed(collapsed,save=true){const section=document.getElementById("tradeLogSection");const btn=document.getElementById("tradeLogToggle");if(!section||!btn)return;section.classList.toggle("collapsed",collapsed);btn.innerHTML=logChevron(!collapsed);btn.setAttribute("aria-expanded",String(!collapsed));btn.title=collapsed?"Expand trade logs":"Collapse trade logs";btn.setAttribute("aria-label",collapsed?"Expand trade logs":"Collapse trade logs");if(save)localStorage.setItem("chandra-trade-logs-collapsed",collapsed?"1":"0")}
+setTradeLogsCollapsed(localStorage.getItem("chandra-trade-logs-collapsed")==="1",false);
 function toggleTradeLogs(){const section=document.getElementById("tradeLogSection");setTradeLogsCollapsed(!section.classList.contains("collapsed"))}
-function setStrategyLogCollapsed(strategy,collapsed,save=true){const card=document.getElementById(strategy+"LogCard");const btn=document.getElementById(strategy+"LogToggle");if(!card||!btn)return;card.classList.toggle("collapsed",collapsed);btn.textContent=collapsed?"▲":"▼";const label=strategyLabel(strategy);btn.title=(collapsed?"Expand ":"Collapse ")+label+" log";btn.setAttribute("aria-label",btn.title);if(save)localStorage.setItem("chandra-"+strategy+"-log-collapsed",collapsed?"1":"0")}
+function setStrategyLogCollapsed(strategy,collapsed,save=true){const card=document.getElementById(strategy+"LogCard");const btn=document.getElementById(strategy+"LogToggle");if(!card||!btn)return;card.classList.toggle("collapsed",collapsed);btn.innerHTML=logChevron(!collapsed);btn.setAttribute("aria-expanded",String(!collapsed));const label=strategyLabel(strategy);btn.title=(collapsed?"Expand ":"Collapse ")+label+" log";btn.setAttribute("aria-label",btn.title);if(save)localStorage.setItem("chandra-"+strategy+"-log-collapsed",collapsed?"1":"0")}
 function toggleStrategyLog(strategy){const card=document.getElementById(strategy+"LogCard");if(!card)return;setStrategyLogCollapsed(strategy,!card.classList.contains("collapsed"))}
-(function(){["strategic","magical","timing","manual"].forEach(strategy=>setStrategyLogCollapsed(strategy,localStorage.getItem("chandra-"+strategy+"-log-collapsed")==="1",false))})();
+(function(){["strategic","magical","timing","timing2","pob","manual"].forEach(strategy=>setStrategyLogCollapsed(strategy,localStorage.getItem("chandra-"+strategy+"-log-collapsed")==="1",false))})();
 function applyTheme(theme){root.dataset.theme=theme;localStorage.setItem("chandra-theme",theme);document.getElementById("themeBtn").textContent=theme==="light"?"☾":"☀";document.getElementById("themeBtn").title=theme==="light"?"Switch to dark mode":"Switch to light mode"}
 function toggleTheme(){applyTheme(root.dataset.theme==="light"?"dark":"light")}
 applyTheme(localStorage.getItem("chandra-theme")||"dark");
-async function api(url,options={}){const r=await fetch(url,{credentials:"include",...options});if(!r.ok)throw new Error(await r.text());return r.json()}
+function apiErrorMessage(text){
+  try{
+    const body=JSON.parse(text),detail=body.detail??body.message;
+    if(typeof detail==="string")return detail;
+    if(Array.isArray(detail))return detail.map(item=>item.msg||"Invalid input").join("; ");
+    return "Request failed. Please try again.";
+  }catch(e){return text||"Request failed. Please try again.";}
+}
+async function api(url,options={}){const r=await fetch(url,{credentials:"include",...options});if(!r.ok)throw new Error(apiErrorMessage(await r.text()));return r.json()}
+function escapePOB(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function pobPrice(v){return v==null?'—':Number(v).toLocaleString('en-US',{maximumFractionDigits:8,useGrouping:false});}
+function pobTable(levels){if(!levels)return document.getElementById('pobLevelSource').value==='candle'?'<p class="muted">POB levels will appear after the selected candle closes.</p>':'<p class="muted">Enter valid High and Low to see POB levels.</p>';return '<table style="width:100%;font-size:10px"><thead><tr><th>Side</th><th>Entry</th><th>Initial SL</th><th>T2</th><th>T3</th></tr></thead><tbody>'+Object.entries(levels).filter(([side])=>side==='buy'||side==='sell').map(([side,v])=>`<tr><th>${side.toUpperCase()}</th>${['entry','stop','t2','t3'].map(k=>`<td>${pobPrice(v[k])}</td>`).join('')}</tr>`).join('')+'</tbody></table>';}
+function updatePOBSource(){
+ const auto=document.getElementById('pobLevelSource').value==='candle';
+ document.getElementById('pobCandleTimeWrap').hidden=!auto;
+ for(const id of ['pobHigh','pobLow']){const input=document.getElementById(id);input.parentElement.hidden=auto;input.readOnly=auto;input.disabled=auto||document.getElementById('pobLevelSource').disabled;}
+ document.getElementById('pobCandleMessage').textContent='';
+ if(auto){pobHigh.value='';pobLow.value='';}
+ previewPOB();
+}
+function previewPOB(){const h=Number(document.getElementById('pobHigh').value),l=Number(document.getElementById('pobLow').value),d=h-l;const levels=Number.isFinite(h)&&Number.isFinite(l)&&h>l&&l>0&&l-2.36*d>0?{buy:{entry:h+.236*d,stop:h-.236*d,t2:h+1.460*d,t3:h+2.36*d},sell:{entry:l-.236*d,stop:l+.236*d,t2:l-1.416*d,t3:l-2.36*d}}:null;if(levels&&document.getElementById('pobSlMode').value==='levels'){levels.buy.stop=levels.sell.entry;levels.sell.stop=levels.buy.entry;}document.getElementById('pobPreview').innerHTML=pobTable(levels);}
+function renderPOBStatus(s,enabled){if(pobLevelSource.value==='candle'){
+ const range=s.candle_range;
+ pobHigh.value=range?.high??'';pobLow.value=range?.low??'';
+ document.getElementById('pobCandleMessage').textContent=window.__botRunning&&document.getElementById('pobLevelSource').disabled?(s.candle_message||'Waiting for selected POB candle'):'';previewPOB();
+ }else{document.getElementById('pobCandleMessage').textContent='';}
+const el=document.getElementById('pobLiveStatus'),table=document.getElementById('pobLiveLevels');if(!el)return;const p=s.position;el.textContent=s.error||(s.target_completed?"Target completed — POB paused":s.pending?'Awaiting broker confirmation: '+s.pending:p?`${p.volume} lot · ${p.t2_done?'T2 complete · strategy SL at entry':p.t2_triggered?'T2 triggered · awaiting fills':'Position open'}`:enabled===false?'Entries paused':s.armed?s.armed+' armed · waiting for retest':'Waiting for entry');if(p?.broker_sl)el.textContent+=' · Broker SL '+pobPrice(p.broker_sl);table.innerHTML=pobTable(p?{[p.side.toLowerCase()]:p.levels}:s.levels);}
 function strategies(){return [...document.querySelectorAll('input[name="strategy"]:checked')].map(e=>e.value)}
-function strategyLabel(s){return s==="strategic"?"Strategic Entry":s==="magical"?"Trap Candles":"Timing Candle"}
-function updateTimingConfig(){const on=strategies().includes("timing");document.getElementById("timingConfig").style.display=on?"grid":"none"}
-function updateStrategyTargetConfig(){const active=new Set(strategies());["strategic","magical","timing"].forEach(name=>{const wrap=document.getElementById(name+"TargetWrap");if(wrap)wrap.style.display=active.has(name)?"block":"none"})}
+function strategyLabel(s){return s==="strategic"?"Strategic Entry":s==="magical"?"Trap Candles":s==="pob"?"POB":s==="timing2"?"STC B":"STC A"}
+function updateTimingConfig(){document.getElementById("pobConfig").style.display=strategies().includes("pob")?"block":"none";for(const name of ["timing","timing2"])document.getElementById(name+"Config").style.display=strategies().includes(name)?"grid":"none"}
+function updateSetupSummaries(){
+  for(const name of ["strategic","magical","timing","timing2","pob"]){document.getElementById(name+"SetupSummary").textContent=`${document.getElementById(name+"Symbol").value||"Select symbol"} · ${document.getElementById(name+"Timeframe").value} · ${document.getElementById(name+"Lot").value||"—"} lot`;}
+}
+(function(){
+  for(const name of ["strategic","magical","timing","timing2","pob"]){
+    const section=document.getElementById(name+"Settings"),key="chandra-setup-collapsed-"+name;
+    try{section.open=localStorage.getItem(key)!=="1"}catch(e){}
+    section.addEventListener("toggle",()=>{try{localStorage.setItem(key,section.open?"0":"1")}catch(e){}});
+  }
+  document.getElementById("strategySettings").addEventListener("input",updateSetupSummaries);
+  document.getElementById("strategySettings").addEventListener("change",updateSetupSummaries);
+  updateSetupSummaries();
+})();
+function updateStrategyTargetConfig(){updateSetupSummaries();const active=new Set(strategies());["strategic","magical","timing","timing2","pob"].forEach(name=>{document.getElementById(name+"Settings").hidden=!active.has(name)});["strategic","magical","timing","timing2"].forEach(name=>{const wrap=document.getElementById(name+"TargetWrap");if(wrap)wrap.style.display=active.has(name)?"block":"none"})}
 function strategyChanged(){
   // Strategy selection is a local UI choice. Do NOT call the backend here.
   // The backend is updated only by Save Configuration / START BOT.
@@ -376,7 +444,7 @@ function setModeRadio(value){
 function openBacktest(){
   const today=new Date(); const iso=d=>d.toISOString().slice(0,10);
   if(!btFrom.value){btFrom.value=iso(new Date(today.getTime()-6*86400000));} if(!btTo.value){btTo.value=iso(today);} setBtRangeActive(7);
-  btLot.value=lot.value||"0.01"; btSymbol.value=symbol.value||"XAUUSD.sd"; btTimeframe.value=(timeframe.value||"M1").toUpperCase(); btStrategy.value="strategic";
+  btLot.value=document.getElementById("strategicLot").value||"0.01"; btSymbol.value=document.getElementById("strategicSymbol").value||"XAUUSD"; btTimeframe.value=(document.getElementById("strategicTimeframe").value||"M1").toUpperCase(); btStrategy.value="strategic";
   btTimingStartTime.value=timingStartTime.value||"04:00";
   btTimingEndTime.value=timingEndTime.value||"08:00";
   updateBacktestStrategy(); backtestModal.classList.add("open");
@@ -399,7 +467,7 @@ function btRange(days,button){
 function money(v){const n=Number(v||0);return (n>=0?"+":"")+n.toFixed(2)}
 function updateBacktestStrategy(){
   const timing=btStrategy.value==="timing";
-  btTitle.textContent=(timing?"Timing Candle":"Strategic Entry")+" — Backtest";
+  btTitle.textContent=(timing?"STC A":"Strategic Entry")+" — Backtest";
   btDescription.textContent=timing?"MT5 chart-time candle • breakout close • later retest entry • timing candle High/Low stop loss":"Fib 3 Strategic Entry • Signal candle High/Low exit • ± 5 point safety protection";
   btTimeframe.value=timing?"M5":btTimeframe.value;
   btTimingStartWrap.style.display=timing?"block":"none"; btTimingEndWrap.style.display=timing?"block":"none";
@@ -423,10 +491,25 @@ async function runStrategicBacktest(){
     const rows=(x.trades_detail||[]).map((t,i)=>`<tr><td>${i+1}</td><td class="${t.side==='BUY'?'buy':'sell'}">${t.side}</td><td>${t.entry.toFixed(2)}</td><td>${t.initial_sl!=null?t.initial_sl.toFixed(2):"—"}</td><td>${t.reference!=null?t.reference.toFixed(2):"—"}</td><td>${t.exit.toFixed(2)}</td><td>${t.reason}</td><td class="${t.pnl>=0?'pnl-positive':'pnl-negative'}">${money(t.pnl)}</td></tr>`).join("");
     const dayRows=(x.daily_stats||[]).map(d=>`<tr><td>${d.date}</td><td>${d.trades}</td><td>${d.wins}</td><td>${d.losses}</td><td class="${d.pnl>=0?'pnl-positive':'pnl-negative'}">${money(d.pnl)}</td><td>${d.points.toFixed(2)}</td><td>${d.target_reached?'✓':'—'}</td></tr>`).join("");
     const controls=`Max trades/day: ${x.max_trades_per_day>0?x.max_trades_per_day:'Unlimited'} • Daily target: ${x.daily_target_points>0?x.daily_target_points+' points':'OFF'}`;
-    out.innerHTML=`<div class="muted" style="margin-bottom:8px">${x.from} → ${x.to} • ${x.symbol} • ${x.timeframe} • ${x.candles} closed candles<br>${controls}<br><span class="muted">${timing?`Timing window ${String(x.timing_hour).padStart(2,'0')}:${String(x.timing_minute).padStart(2,'0')}–${x.end_time||'session close'} MT5 chart time • breakout close then later retest • SL = timing candle High/Low`:`Normal exit: opposite signal candle High/Low + later close • Safety protection: ± 5 points`}</span></div><div class="backtest-metrics"><div class="bt-metric"><span>TRADES</span><b>${x.trades}</b></div><div class="bt-metric"><span>WIN RATE</span><b>${x.win_rate.toFixed(2)}%</b></div><div class="bt-metric"><span>BUY / SELL</span><b>${x.buy_trades} / ${x.sell_trades}</b></div><div class="bt-metric"><span>NET P&L</span><b class="${x.net_pnl>=0?'pnl-positive':'pnl-negative'}">${money(x.net_pnl)}</b></div><div class="bt-metric"><span>WINS</span><b>${x.wins}</b></div><div class="bt-metric"><span>LOSSES</span><b>${x.losses}</b></div><div class="bt-metric"><span>MAX DRAWDOWN</span><b>${x.max_drawdown.toFixed(2)}</b></div><div class="bt-metric"><span>PROFITABLE / LOSING DAYS</span><b>${x.profitable_days} / ${x.losing_days}</b></div></div>${dayRows?`<div style="overflow:auto"><table class="backtest-table"><thead><tr><th>Date</th><th>Trades</th><th>Wins</th><th>Losses</th><th>P&L</th><th>Points</th><th>Target</th></tr></thead><tbody>${dayRows}</tbody></table></div>`:''}${rows?`<div style="overflow:auto;max-height:300px"><table class="backtest-table"><thead><tr><th>#</th><th>Side</th><th>Entry</th><th>Safety SL</th><th>Signal Ref</th><th>Exit</th><th>Reason</th><th>P&L</th></tr></thead><tbody>${rows}</tbody></table></div>`:'<div class="empty">No Timing Candle trades in this range.</div>'}`;
+    out.innerHTML=`<div class="muted" style="margin-bottom:8px">${x.from} → ${x.to} • ${x.symbol} • ${x.timeframe} • ${x.candles} closed candles<br>${controls}<br><span class="muted">${timing?`Timing window ${String(x.timing_hour).padStart(2,'0')}:${String(x.timing_minute).padStart(2,'0')}–${x.end_time||'session close'} MT5 chart time • breakout close then later retest • SL = timing candle High/Low`:`Normal exit: opposite signal candle High/Low + later close • Safety protection: ± 5 points`}</span></div><div class="backtest-metrics"><div class="bt-metric"><span>TRADES</span><b>${x.trades}</b></div><div class="bt-metric"><span>WIN RATE</span><b>${x.win_rate.toFixed(2)}%</b></div><div class="bt-metric"><span>BUY / SELL</span><b>${x.buy_trades} / ${x.sell_trades}</b></div><div class="bt-metric"><span>NET P&L</span><b class="${x.net_pnl>=0?'pnl-positive':'pnl-negative'}">${money(x.net_pnl)}</b></div><div class="bt-metric"><span>WINS</span><b>${x.wins}</b></div><div class="bt-metric"><span>LOSSES</span><b>${x.losses}</b></div><div class="bt-metric"><span>MAX DRAWDOWN</span><b>${x.max_drawdown.toFixed(2)}</b></div><div class="bt-metric"><span>PROFITABLE / LOSING DAYS</span><b>${x.profitable_days} / ${x.losing_days}</b></div></div>${dayRows?`<div style="overflow:auto"><table class="backtest-table"><thead><tr><th>Date</th><th>Trades</th><th>Wins</th><th>Losses</th><th>P&L</th><th>Points</th><th>Target</th></tr></thead><tbody>${dayRows}</tbody></table></div>`:''}${rows?`<div style="overflow:auto;max-height:300px"><table class="backtest-table"><thead><tr><th>#</th><th>Side</th><th>Entry</th><th>Safety SL</th><th>Signal Ref</th><th>Exit</th><th>Reason</th><th>P&L</th></tr></thead><tbody>${rows}</tbody></table></div>`:'<div class="empty">No STC A trades in this range.</div>'}`;
   }catch(e){msg.textContent=e.message.replace(/^Error:\s*/,'')}finally{btn.disabled=false;btn.textContent="RUN BACKTEST"}
 }
 
+function lockRunningConfig(x){
+  const running=!!(x.running||x.restart_recovery_pending), deployed=new Set(running?(x.strategies||[]):[]);
+  for(const id of ["symbol","timeframe","lot"]){document.getElementById(id).disabled=running}
+  window.__paperSwitchBlocked=!!x.paper_switch_blocked;
+  window.__paperSwitchReason=x.paper_switch_reason||"Close live positions and stop the bot before switching to Paper.";
+  document.querySelectorAll('.exec-toggle input').forEach(e=>e.disabled=running||(e.value==="paper"&&window.__paperSwitchBlocked));
+  document.getElementById("paperLabel").title=window.__paperSwitchBlocked?window.__paperSwitchReason:"";
+  if(x.mode==="live"&&window.__paperSwitchBlocked){setModeRadio("live");renderMode("live");}
+  document.querySelectorAll('input[name="strategy"]').forEach(e=>{e.disabled=deployed.has(e.value);if(e.disabled)e.checked=true});
+  for(const [name,ids] of Object.entries({timing2:["timing2StartTime","timing2EndTime","timing2EntryMode","timing2TargetPoints"],timing:["timingStartTime","timingEndTime","timingEntryMode","timingTargetPoints"],pob:["pobHigh","pobLow","pobEntryMode","pobSlMode","pobLevelSource","pobCandleTime"],strategic:["strategicTargetPoints"],magical:["magicalTargetPoints"]})){for(const id of ids)document.getElementById(id).disabled=deployed.has(name)||(["pobHigh","pobLow"].includes(id)&&pobLevelSource.value==="candle")}
+  for(const name of ["strategic","magical","timing","timing2","pob"]){for(const suffix of ["Symbol","Timeframe","Lot"])document.getElementById(name+suffix).disabled=deployed.has(name)}
+  const button=document.getElementById("configureBtn");button.textContent=running?"Deploy selected strategies":"Save Configuration";
+  button.title=running?"Running strategies are locked. Select another strategy to deploy it.":"";
+  if(!running)window.__deployedConfig=null;
+}
 function applyServerConfig(x){
   // After a browser refresh the HTML defaults are loaded again.
   // Re-apply the actual backend configuration so the UI reflects the
@@ -441,10 +524,24 @@ function applyServerConfig(x){
   if(x.symbol) symbol.value=x.symbol;
   if(x.timeframe) timeframe.value=x.timeframe;
   if(x.lot!=null) lot.value=x.lot;
+  for(const name of ["strategic","magical","timing","timing2","pob"]){const cfg=x.strategy_settings?.[name]||{};document.getElementById(name+"Symbol").value=cfg.symbol||(name==="timing2"?"XAGUSD":x.symbol||"XAUUSD");document.getElementById(name+"Timeframe").value=cfg.timeframe||x.timeframe||"M1";document.getElementById(name+"Lot").value=cfg.lot??x.lot??0.01;}
   if(x.timing_hour!=null&&x.timing_minute!=null) timingStartTime.value=`${String(x.timing_hour).padStart(2,"0")}:${String(x.timing_minute).padStart(2,"0")}`;
   if(timingEndTime) timingEndTime.value=x.timing_end_time||"";
+  timingEntryMode.value=x.timing_entry_mode||"retest";
+  const t2=x.strategy_settings?.timing2||{};
+  timing2StartTime.value=`${String(t2.timing_hour??4).padStart(2,"0")}:${String(t2.timing_minute??0).padStart(2,"0")}`;
+  timing2EndTime.value=t2.timing_end_time===undefined?"08:00":t2.timing_end_time||"";
+  timing2EntryMode.value=t2.timing_entry_mode||"retest";
+  pobLevelSource.value=x.pob_level_source||"manual";
+  pobCandleTime.value=x.pob_candle_time||"04:00";
+  updatePOBSource();
+  document.getElementById("pobHigh").value=x.pob_high??"";
+  document.getElementById("pobLow").value=x.pob_low??"";
+  document.getElementById("pobEntryMode").value=x.pob_entry_mode||"retest";
+  document.getElementById("pobSlMode").value=x.pob_sl_mode||"levels";
+  previewPOB();
   const targets=x.strategy_target_points||{};
-  ["strategic","magical","timing"].forEach(name=>{const input=document.getElementById(name+"TargetPoints");if(input)input.value=targets[name]??""});
+  ["strategic","magical","timing","timing2"].forEach(name=>{const input=document.getElementById(name+"TargetPoints");if(input)input.value=targets[name]??""});
   renderStrategyPanels(serverStrategies);
   updateStrategyTargetConfig();
 }
@@ -452,31 +549,37 @@ function applyServerConfig(x){
 function renderStrategyPanels(selected){
   const grid=document.getElementById("strategyStatusGrid");
   if(!grid) return;
+  const selection=JSON.stringify(selected||[]);
+  if(grid.dataset.selection===selection)return;
+  grid.dataset.selection=selection;
   const defs={
     strategic:{title:"Strategic Entry",close:"CLOSE STRATEGIC",extra:"",key:"strategic"},
     magical:{title:"Trap Candles",close:"CLOSE MAGICAL",extra:"",key:"magical"},
-    timing:{title:"Timing Candle",close:"CLOSE TIMING",extra:'<div class="kv"><span>Levels</span><b id="timingLevels">—</b></div>',key:"timing"}
+    pob:{title:"POB",close:"CLOSE POB",extra:'<div id="pobLiveStatus" class="muted"></div><div id="pobLiveLevels" style="overflow:auto"></div>',key:"pob"},
+    timing:{title:"Significant Time Candle A",close:"CLOSE STC A",extra:'<div class="kv"><span>Levels</span><b id="timingLevels">—</b></div>',key:"timing"},
+    timing2:{title:"Significant Time Candle B",close:"CLOSE STC B",extra:'<div class="kv"><span>Levels</span><b id="timing2Levels">—</b></div>',key:"timing2"}
   };
   grid.innerHTML=(selected||[]).map(name=>{
     const d=defs[name];
     if(!d) return "";
-    return `<div class="strategy-card" data-strategy-panel="${d.key}"><h3>${d.title}</h3><div class="kv"><span>Position</span><b id="${d.key}Position">FLAT</b></div><div class="kv"><span>Entry</span><b id="${d.key}Entry">—</b></div><div class="kv"><span>Current SL</span><b id="${d.key}Sl">—</b></div><div class="kv"><span>Run P&L</span><b id="${d.key}CurrentPnl">0.00</b></div><div class="kv"><span>Run Points</span><b id="${d.key}TargetPointsStatus">OFF</b></div>${d.extra}<button class="danger small" onclick="closeStrategy('${d.key}')">${d.close}</button></div>`;
+    return `<div class="strategy-card" data-strategy-panel="${d.key}"><h3 id="${d.key}MonitorTitle">${d.title}</h3><div class="muted" id="${d.key}Deployment"></div><div class="kv"><span>Position</span><b id="${d.key}Position">FLAT</b></div><div class="kv"><span>Entry</span><b id="${d.key}Entry">—</b></div><div class="kv"><span>Current SL</span><b id="${d.key}Sl">—</b></div><div class="kv"><span title="Floating profit or loss of the current open position only">Open P&L</span><b id="${d.key}CurrentPnl">0.00</b></div><div class="kv"><span>Open Points</span><b id="${d.key}OpenPoints">0.00</b></div><div class="kv"><span title="Closed plus open points for this run; reaching the target closes this strategy">Session Target</span><b id="${d.key}TargetPointsStatus">OFF</b></div>${d.extra}<button class="danger small" onclick="closeStrategy('${d.key}')">${d.close}</button></div>`;
   }).join("");
   grid.style.display=(selected&&selected.length)?"grid":"none";
 }
 function updateDeployedUi(selected){
   const active=new Set(selected||[]);
   // Strategy P&L cards: show only deployed strategies.
-  const pnlMap={strategic:"strategicPnl",magical:"magicalPnl",timing:"timingPnl"};
+  const pnlMap={strategic:"strategicPnl",magical:"magicalPnl",timing:"timingPnl",timing2:"timing2Pnl",pob:"pobPnl"};
   Object.entries(pnlMap).forEach(([key,id])=>{
     const el=document.getElementById(id);
     const row=el?.closest(".row");
     if(row) row.style.display=active.has(key)?"flex":"none";
   });
-  // Trade-log cards: show only deployed strategies.
-  ["strategic","magical","timing"].forEach(key=>{
+  window.__logActiveStrategies=selected||[];
+  // Saved history remains visible even when a strategy is not deployed.
+  ["strategic","magical","timing","timing2","pob"].forEach(key=>{
     const card=document.getElementById(key+"LogCard");
-    if(card) card.style.display=active.has(key)?"block":"none";
+    if(card) card.style.display=active.has(key)||Number(card.dataset.tradeCount||0)>0?"block":"none";
   });
 }
 function renderMode(m){
@@ -489,26 +592,15 @@ function renderMode(m){
   const liveText=liveServer
     ? `⚠ LIVE TRADING ENABLED — real orders can be sent to ${liveServer}.`
     : "⚠ LIVE TRADING ENABLED — real orders can be sent to the connected MT5 server.";
-  const liveWarningTrack=document.getElementById("liveWarningTrack");
-  if(liveWarningTrack){
-    const renderedLiveText=liveText.replace(
-      "LIVE TRADING ENABLED",
-      "<strong>LIVE TRADING ENABLED</strong>"
-    );
-    liveWarningTrack.innerHTML =
-      `<span>${renderedLiveText}</span><span aria-hidden="true">${renderedLiveText}</span>`;
-  }
-  liveWarning.classList.toggle("live-warning-active",m==="live");
-  liveWarning.style.display=m==="live"?"block":"none";
+  liveLabel.title=m==="live"?liveText:"Switch to Live trading";
   execToggle.classList.toggle("live-active",m==="live");
   paperLabel.classList.toggle("active",m==="paper");
   liveLabel.classList.toggle("active",m==="live");
-  monitorMode.textContent=m.toUpperCase();
-  monitorMode.style.color=m==="live"?"var(--red)":"var(--text)";
   monitorStrategy.textContent=labels.length?labels.join(" + "):"NONE";
-  monitorSymbol.textContent=symbol.value.toUpperCase();
+  monitorSymbol.textContent=[...new Set(strategies().map(name=>document.getElementById(name+"Symbol").value))].join(" / ")||"—";
 }
 async function modeChanged(){
+  if(mode()==="paper"&&window.__paperSwitchBlocked){setModeRadio("live");renderMode("live");showConfigError(window.__paperSwitchReason);return;}
   const m=mode();
   renderMode(m);
   if(window.__modeSyncing) return;
@@ -525,24 +617,37 @@ async function modeChanged(){
   // Mode is saved together with strategy selection by Save Configuration.
 }
 async function saveBroker(){try{const x=await api("/api/broker/equiti",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mt5_login:mt5Login.value,mt5_server:mt5Server.value,mt5_password:mt5Password.value})});brokerMsg.textContent=x.message}catch(e){brokerMsg.textContent=e.message}}
+function showConfigError(message=""){const el=document.getElementById("configError");el.textContent=message;el.hidden=!message;}
 async function configure(){
   const selected=strategies();
+  showConfigError();
   renderMode(mode());
   renderStrategyPanels(selected);
   try{
+    if(window.__serverSupportsStrategySettings===false)throw new Error("The server is running an older version. Stop the bot, restart python run_server.py, then refresh this page before starting again.");
     const pointTarget=id=>document.getElementById(id).value===""?null:Number(document.getElementById(id).value);
-    const [timingHour,timingMinute]=(timingStartTime.value||"").split(":").map(Number);
-    if(!Number.isInteger(timingHour)||!Number.isInteger(timingMinute))throw new Error("Choose a valid Timing Candle start time.");
-    if(timingEndTime.value&&timingEndTime.value<=timingStartTime.value)throw new Error("Timing Candle end time must be after the start time.");
-    await api("/api/trading/configure",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({strategies:selected,symbol:symbol.value,timeframe:timeframe.value,lot:Number(lot.value),mode:mode(),timing_hour:timingHour,timing_minute:timingMinute,timing_end_time:(timingEndTime.value||null),strategy_target_points:{strategic:pointTarget("strategicTargetPoints"),magical:pointTarget("magicalTargetPoints"),timing:pointTarget("timingTargetPoints")}})});
-    status.textContent=selected.length?"Configuration saved successfully.":"Configuration saved. No strategy selected.";
+    const [timingHour,timingMinute]=(selected.includes("timing")?(timingStartTime.value||""):"04:00").split(":").map(Number);
+    if(!Number.isInteger(timingHour)||!Number.isInteger(timingMinute))throw new Error("Choose a valid STC A start time.");
+    if(selected.includes("timing")&&timingEndTime.value&&timingEndTime.value<=timingStartTime.value)throw new Error("STC A end time must be after the start time.");
+    await api("/api/trading/configure",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({strategies:selected,strategy_settings:Object.fromEntries(selected.map(name=>[name,{symbol:document.getElementById(name+"Symbol").value.trim(),timeframe:document.getElementById(name+"Timeframe").value,lot:Number(document.getElementById(name+"Lot").value),...(name==="timing2"?{timing_hour:Number(timing2StartTime.value.split(":")[0]),timing_minute:Number(timing2StartTime.value.split(":")[1]),timing_end_time:timing2EndTime.value||null,timing_entry_mode:timing2EntryMode.value}:{})}])),pob_level_source:pobLevelSource.value,pob_candle_time:pobCandleTime.value,pob_high:selected.includes("pob")&&pobLevelSource.value==="manual"?Number(pobHigh.value):null,pob_low:selected.includes("pob")&&pobLevelSource.value==="manual"?Number(pobLow.value):null,pob_entry_mode:pobEntryMode.value,pob_sl_mode:pobSlMode.value,symbol:symbol.value,timeframe:timeframe.value,lot:Number(lot.value),mode:mode(),timing_hour:timingHour,timing_minute:timingMinute,timing_end_time:(selected.includes("timing")?(timingEndTime.value||null):null),timing_entry_mode:timingEntryMode.value,strategy_target_points:Object.fromEntries(selected.filter(name=>name!=="pob").map(name=>[name,pointTarget(name+"TargetPoints")]))})});
+    uiStatus.textContent=selected.length?"Configuration saved successfully.":"Configuration saved. No strategy selected.";
     return true;
   }catch(e){
-    status.textContent=e.message;
+    uiStatus.textContent=e.message;showConfigError(e.message);
     throw e;
   }
 }
-async function testMT5(){try{const x=await api("/api/trading/mt5-test",{method:"POST"});mt5Pill.textContent=x.connected?"CONNECTED":"ERROR";mt5Pill.style.color=x.connected?"#3fb950":"#f85149";accountBox.innerHTML=x.connected?`Server: ${x.server} • Account: ${x.login}<br>Balance: ${x.balance} • Equity: ${x.equity}<br>Instrument: <strong>${x.mt5_symbol}</strong> • Bid: ${x.bid} • Ask: ${x.ask}`:`MT5 error: ${x.error}`}catch(e){accountBox.textContent=e.message}}
+function renderBrokerSummary(x){
+  document.getElementById("brokerCompact").classList.toggle("is-connected",!!x.connected);
+  document.getElementById("mt5Pill").classList.toggle("is-connected",!!x.connected);
+  document.getElementById("mt5Pill").textContent=x.connected?"CONNECTED":x.error?"ERROR":"DISCONNECTED";
+  document.getElementById("brokerCompactDot").textContent=x.connected?"✓":"";
+
+  document.getElementById("brokerCompactStatus").textContent=x.connected?"Connected":x.error?"Error":"Disconnected";
+  document.getElementById("brokerCompactDot").style.background=x.connected?"var(--green)":"var(--red)";
+const box=document.getElementById('accountBox');const snapshot=JSON.stringify([x.connected,x.error,x.login,x.server,x.balance,x.equity,x.currency]);box.title=`${x.mt5_symbol||''} · Bid ${x.bid??'—'} · Ask ${x.ask??'—'}`;if(box.dataset.snapshot===snapshot)return;box.dataset.snapshot=snapshot;box.replaceChildren();if(!x.connected){box.textContent=x.error?'MT5: '+x.error:'Connect your MT5 account to see balance and equity.';return;}const money=v=>v==null?'—':Number(v).toLocaleString(undefined,{maximumFractionDigits:2});const values=[['Account',x.login],['Server',x.server],['Balance',money(x.balance)+(x.currency?' '+x.currency:'')],['Equity',money(x.equity)+(x.currency?' '+x.currency:'')]];for(const [label,value] of values){const span=document.createElement('span');span.append(label+' ');const strong=document.createElement('b');strong.textContent=String(value??'—');span.append(strong);box.append(span);}box.title=`${x.mt5_symbol||''} · Bid ${x.bid??'—'} · Ask ${x.ask??'—'}`;}
+async function testMT5(){try{const x=await api("/api/trading/mt5-test",{method:"POST"});mt5Pill.textContent=x.connected?"CONNECTED":"ERROR";mt5Pill.style.color=x.connected?"var(--green)":"var(--red)";renderBrokerSummary(x)}catch(e){renderBrokerSummary({connected:false,error:e.message})}}
+
 function setBotButtonState(kind,state){
   const startBtn=document.querySelector('button[onclick="startBot()"]');
   const stopBtn=document.querySelector('button[onclick="stopBot()"]');
@@ -572,38 +677,39 @@ function setBotButtonState(kind,state){
 async function startBot(){
   const selected=strategies();
   if(!selected.length){
-    status.textContent="Cannot start bot: select at least one strategy first.";
+    uiStatus.textContent="Cannot start bot: select at least one strategy first.";
     return;
   }
   setBotButtonState("start","busy");
   try{
-    await configure();
+    if(!(await configure())){setBotButtonState("start","idle");return;}
     await api("/api/trading/start",{method:"POST"});
-    status.textContent="BOT STARTED successfully.";
+    uiStatus.textContent="BOT STARTED successfully.";
     setBotButtonState("start","success");
     await poll();
   }catch(e){
     setBotButtonState("start","idle");
-    status.textContent=e.message;
+    uiStatus.textContent=e.message;showConfigError(e.message);
   }
 }
 async function stopBot(){
+  showConfigError();
   setBotButtonState("stop","busy");
   try{
     await api("/api/trading/stop",{method:"POST"});
-    status.textContent="BOT STOPPED successfully.";
+    uiStatus.textContent="BOT STOPPED successfully.";
     setBotButtonState("stop","success");
     await poll();
   }catch(e){
     setBotButtonState("stop","idle");
-    status.textContent=e.message;
+    uiStatus.textContent=e.message;showConfigError(e.message);
   }
 }
 async function confirmLiveAction(message){if(mode()!=="live")return true;return window.confirm("LIVE TRADING\n\n"+message+"\n\nThis can affect real MT5 positions.")}
-async function stopTrading(){try{await api("/api/trading/stop-trading",{method:"POST"});poll()}catch(e){status.textContent=e.message}}
-async function resumeTrading(){try{await api("/api/trading/resume-trading",{method:"POST"});poll()}catch(e){status.textContent=e.message}}
-async function closeStrategy(strategy){const label=strategyLabel(strategy);if(!window.confirm("Close "+label+" position?\n\nThis closes only the position owned by this strategy."))return;if(!(await confirmLiveAction("Close "+label+" now?")))return;try{await api("/api/trading/close/"+strategy,{method:"POST"});poll()}catch(e){status.textContent=e.message}}
-async function closeAllPositions(){if(!window.confirm("CLOSE ALL CHANDRA POSITIONS?\n\nThis closes Strategic Entry, Trap Candles and Timing Candle positions only."))return;if(!(await confirmLiveAction("Close ALL Chandra-managed positions now?")))return;try{await api("/api/trading/close-all",{method:"POST"});poll()}catch(e){status.textContent=e.message}}
+async function stopTrading(){try{await api("/api/trading/stop-trading",{method:"POST"});poll()}catch(e){uiStatus.textContent=e.message}}
+async function resumeTrading(){try{await api("/api/trading/resume-trading",{method:"POST"});poll()}catch(e){uiStatus.textContent=e.message}}
+async function closeStrategy(strategy){const label=strategyLabel(strategy);if(!window.confirm("Close "+label+" position?\n\nThis closes only the position owned by this strategy."))return;if(!(await confirmLiveAction("Close "+label+" now?")))return;try{await api("/api/trading/close/"+strategy,{method:"POST"});poll()}catch(e){uiStatus.textContent=e.message}}
+async function closeAllPositions(){if(!window.confirm("CLOSE ALL CHANDRA POSITIONS?\n\nThis closes enabled Strategic Entry, Trap Candles, STC A/B, POB and manual positions."))return;if(!(await confirmLiveAction("Close ALL Chandra-managed positions now?")))return;try{await api("/api/trading/close-all",{method:"POST"});poll()}catch(e){uiStatus.textContent=e.message}}
 
 async function manualOrder(side){
   const lotValue=Number(document.getElementById("manualLot").value||lot.value||0.01);
@@ -614,20 +720,42 @@ async function manualOrder(side){
 
 SL: ${sl!=null?sl:"OFF"}
 Target: ${target!=null?target:"OFF"}`)))return;
-  try{await api("/api/trading/manual/order",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({side,lot:lotValue,sl,target})});poll()}catch(e){status.textContent=e.message}
+  try{await api("/api/trading/manual/order",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({side,lot:lotValue,sl,target})});poll()}catch(e){uiStatus.textContent=e.message}
 }
-async function closeManual(){if(!window.confirm("Close the MANUAL position?"))return;if(!(await confirmLiveAction("Close the manual MT5 position now?")))return;try{await api("/api/trading/manual/close",{method:"POST"});poll()}catch(e){status.textContent=e.message}}
+async function closeManual(){if(!window.confirm("Close the MANUAL position?"))return;if(!(await confirmLiveAction("Close the manual MT5 position now?")))return;try{await api("/api/trading/manual/close",{method:"POST"});poll()}catch(e){uiStatus.textContent=e.message}}
 
 async function logout(){await api("/api/auth/logout",{method:"POST"});location.reload()}
+function renderLiveStrategySignals(x){
+ const active=new Set(x.strategies||[]);
+ const groups={strategic:['buyCondition','sellCondition','strategicBuy','strategicSell','l100'],magical:['magicalBuy','magicalSell'],timing:['timingBuy','timingSell'],timing2:['timing2Buy','timing2Sell']};
+ for(const [name,ids] of Object.entries(groups))for(const id of ids)document.getElementById(id).parentElement.hidden=!active.has(name);
+ for(const name of ['timing','timing2']){
+  const v=x.strategy_status?.[name]||{};
+  const direct=(name==='timing'?x.timing_entry_mode:x.strategy_settings?.timing2?.timing_entry_mode)==='direct';
+  for(const [suffix,side] of [['Buy',1],['Sell',-1]]){
+   const el=document.getElementById(name+suffix);
+   const armed=side===1?v.timing_armed_buy:v.timing_armed_sell;
+   el.textContent=!x.running?'STOPPED':v.session_target_reached?'TARGET REACHED':v.timing_session_blocked?'SESSION CLOSED':x.entries_enabled===false?'PAUSED':v.position?(v.position===side?'POSITION OPEN':'POSITION ACTIVE'):v.timing_high==null?'WAITING FOR CANDLE':direct?'WAITING FOR CROSSING':armed?'WAITING FOR RETEST':'WAITING FOR BREAKOUT';
+   el.className=v.position===side||armed?'on':'off';
+   el.title=v.target_close_message||v.timing_session_message||v.timing_entry_message||el.textContent;
+  }
+ }
+}
 function setSignal(id,v){const e=document.getElementById(id);if(v===undefined||v===null){e.textContent="—";e.className="off";return}e.textContent=v?"TRUE":"FALSE";e.className=v?"on":"off"}
 async function poll(){
   await loadTrades();try{const x=await api("/api/trading/status");
+  window.__serverSupportsStrategySettings=Object.prototype.hasOwnProperty.call(x,"strategy_settings");
   // When the bot is running, backend state is the source of truth.
   // When the bot is stopped, preserve the user's selected PAPER/LIVE mode.
   // This prevents timing/strategy configuration or the 1-second poll from
   // silently changing LIVE back to PAPER.
-  if(x.running){
+  if(x.running||x.restart_recovery_pending){
+    const deployed=JSON.stringify([x.strategies,x.symbol,x.timeframe,x.lot,x.mode,x.strategy_settings]);
+    if(window.__deployedConfig!==deployed){applyServerConfig(x);window.__deployedConfig=deployed}
+  } else if(!window.__initialUiHandled && (x.runtime_configuration_saved||(x.strategies||[]).includes("pob"))){
     applyServerConfig(x);
+    setModeRadio(x.mode||"paper");
+    window.__initialUiHandled=true;
   } else if(!window.__initialUiHandled){
     document.querySelectorAll('input[name="strategy"]').forEach(e=>e.checked=false);
     renderStrategyPanels([]);
@@ -636,17 +764,21 @@ async function poll(){
 
   const currentUiMode=mode();
 
-  status.textContent=`${x.running?"RUNNING":"STOPPED"} • ${currentUiMode.toUpperCase()} • ${(x.strategies||[]).join(" + ")} • ${x.symbol} • ${x.timeframe} • ${x.lot} lot`;
+  uiStatus.textContent=`${x.running?"RUNNING":"STOPPED"} • ${currentUiMode.toUpperCase()} • ${(x.strategies||[]).join(" + ")}`;
+  if(x.restart_recovery_pending)uiStatus.textContent=(x.error||"Saved session restored; automatic recovery pending.")+" Fix any reported issue, then use Start Bot to retry.";
+  if(x.restart_recovery_error)uiStatus.textContent=x.restart_recovery_error;
   botPill.textContent=x.running?"RUNNING":"STOPPED";
+  botPill.classList.toggle("is-running",!!x.running);
   botPill.style.color=x.running?"#3fb950":"var(--muted)";
   window.__botRunning=!!x.running;
+  lockRunningConfig(x);
   window.__initialUiHandled=true;
   const startBtn=document.querySelector('button[onclick="startBot()"]');
   const stopBtn=document.querySelector('button[onclick="stopBot()"]');
   if(startBtn && !startBtn.classList.contains("action-busy") && !startBtn.classList.contains("action-success")) startBtn.disabled=!!x.running;
-  if(stopBtn && !stopBtn.classList.contains("action-busy") && !stopBtn.classList.contains("action-success")) stopBtn.disabled=!x.running;
+  if(stopBtn && !stopBtn.classList.contains("action-busy") && !stopBtn.classList.contains("action-success")) stopBtn.disabled=!(x.running||x.restart_recovery_pending);
 
-  if(x.running && x.mode && x.mode!==mode()){
+  if((x.running||x.restart_recovery_pending) && x.mode && x.mode!==mode()){
     window.__modeSyncing=true;
     setModeRadio(x.mode);
     renderMode(x.mode);
@@ -657,12 +789,10 @@ async function poll(){
   }
 
   const displayMode=x.running?(x.mode||mode()):mode();
-  monitorMode.style.color=displayMode==="live"?"var(--red)":"var(--text)";
-  monitorMode.textContent=displayMode.toUpperCase();
 
   const sts=x.strategies||[];
   monitorStrategy.textContent=sts.map(strategyLabel).join(" + ")||"NONE";
-  monitorSymbol.textContent=x.symbol||symbol.value.toUpperCase();
+  monitorSymbol.textContent=[...new Set((x.strategies||[]).map(name=>x.strategy_settings?.[name]?.symbol||x.symbol))].join(" / ")||"—";
 
   const s=x.last_signal||{};
   setSignal("buyCondition",s.buy_condition);
@@ -688,42 +818,64 @@ async function poll(){
   resume.disabled=enabled||!x.running;
   document.getElementById("safetyReason").textContent=x.safety_halt_reason?" • "+x.safety_halt_reason:"";
 
-  window.__combinedPnl=Number(x.combined_session_pnl||0);
+  window.__combinedPnl=Number(x.combined_pnl||0);
 
   const mmp=document.getElementById("manualModePill");
   if(mmp)mmp.textContent=displayMode.toUpperCase();
 
+  window.__timingStatusContext=x;
   renderStrategyStatus(x.strategy_status||{});
+  renderLiveStrategySignals(x);
+  for(const name of x.strategies||[]){const el=document.getElementById(name+"Deployment"),cfg=x.strategy_settings?.[name]||{};if(el)el.textContent=`${displayInstrument(cfg.symbol||x.symbol)} · ${cfg.timeframe||x.timeframe} · ${cfg.lot??x.lot} lot`;if(name==="timing"||name==="timing2"){const title=document.getElementById(name+"MonitorTitle");if(title)title.textContent=(name==="timing"?"Significant Time Candle A":"Significant Time Candle B");}}
+  renderPOBStatus({...x.pob,error:x.pob?.error||x.error},x.entries_enabled);
   document.getElementById("combinedPnl").textContent=window.__combinedPnl.toFixed(2);
 
   if(x.account&&x.account.server){
     window.__mt5Server=String(x.account.server);
-    mt5Pill.textContent="CONNECTED";
-    mt5Pill.style.color="#3fb950";
+    const connected=x.mt5_connected!==false;
+    renderBrokerSummary({...x.account,connected,error:x.error||x.safety_halt_reason});
+    mt5Pill.textContent=connected?"CONNECTED":"DISCONNECTED";
+    mt5Pill.style.color=connected?"var(--green)":"var(--red)";
   }else{
     window.__mt5Server="";
   }
 
   renderMode(displayMode);
   loadTrades();
-}catch(e){status.textContent=e.message}}
+}catch(e){uiStatus.textContent=e.message}}
+function timingStatusMessage(name,tv,context={}){
+  if(tv.target_close_message)return tv.target_close_message;
+  if(tv.timing_session_message)return tv.timing_session_message;
+  if(tv.session_target_reached)return "Target reached — entries stopped";
+  if(context.running===false)return "Bot stopped";
+  if(tv.position)return "Position open — monitoring stop-loss and target";
+  if(tv.timing_entry_message)return tv.timing_entry_message;
+  if(context.entries_enabled===false)return "New entries paused";
+  if(tv.timing_high==null||tv.timing_low==null)return "Waiting for the timing candle to complete";
+  const entryMode=name==="timing2"?context.strategy_settings?.timing2?.timing_entry_mode:context.timing_entry_mode;
+  if(entryMode==="direct")return "Waiting for a fresh price crossing";
+  if(tv.timing_armed_buy)return "BUY breakout confirmed — waiting for retest";
+  if(tv.timing_armed_sell)return "SELL breakout confirmed — waiting for retest";
+  return "Waiting for breakout candle close";
+}
 function renderStrategyStatus(ss){
-  for(const name of ["strategic","magical","timing"]){
+  for(const name of ["strategic","magical","timing","timing2","pob"]){
     const v=ss[name]||{};
     const pos=v.position===1?"BUY":v.position===-1?"SELL":"FLAT";
     const el=document.getElementById(name+"Position");
     if(el){
       el.textContent=pos;
       el.className=v.position===1?"buy":v.position===-1?"sell":"";
-      document.getElementById(name+"Entry").textContent=v.entry_price!=null?Number(v.entry_price).toFixed(2):"—";
-      document.getElementById(name+"Sl").textContent=v.sl!=null?Number(v.sl).toFixed(2):"—";
+      document.getElementById(name+"Entry").textContent=v.entry_price!=null?(name==="pob"?pobPrice(v.entry_price):Number(v.entry_price).toFixed(2)):"—";
+      document.getElementById(name+"Sl").textContent=v.sl!=null?(name==="pob"?pobPrice(v.sl):Number(v.sl).toFixed(2)):"—";
       const pnl=Number(v.session_total_pnl||0);
       const p=document.getElementById(name+"CurrentPnl");
-      p.textContent=pnl.toFixed(2); p.className=pnl>0?"pnl-positive":pnl<0?"pnl-negative":"";
+      const openPnl=v.position?Number(v.pnl||0):0;
+      p.textContent=openPnl.toFixed(2); p.className=openPnl>0?"pnl-positive":openPnl<0?"pnl-negative":"";
       const top=document.getElementById(name+"Pnl");
       if(top){top.textContent=pnl.toFixed(2);top.className=pnl>0?"pnl-positive":pnl<0?"pnl-negative":"";}
-      const logPill=document.getElementById(name+"LogPill");
-      if(logPill)logPill.textContent="Run P&L "+pnl.toFixed(2);
+      const openPoints=document.getElementById(name+"OpenPoints");
+      if(openPoints)openPoints.textContent=v.open_points==null?"—":Number(v.open_points).toFixed(2);
       const target=document.getElementById(name+"TargetPointsStatus");
       if(target){
         const goal=v.session_target_points;
@@ -745,34 +897,68 @@ function renderStrategyStatus(ss){
     const mpe=document.getElementById("manualCurrentPnl");
     mpe.textContent=mp.toFixed(2); mpe.className=mp>0?"pnl-positive":mp<0?"pnl-negative":"";
   }
-  const tv=ss.timing||{};
-  const timingLevels=document.getElementById("timingLevels");
+  for(const name of ["timing","timing2"]){
+  const tv=ss[name]||{};
+  if(name==="timing2"){setSignal("timing2Buy",tv.timing_armed_buy);setSignal("timing2Sell",tv.timing_armed_sell);}
+  const timingLevels=document.getElementById(name+"Levels");
+  if(timingLevels){let note=document.getElementById(name+"SessionNote");if(!note){note=document.createElement("div");note.id=name+"SessionNote";note.className="muted";note.setAttribute("role","status");timingLevels.parentElement.insertAdjacentElement("afterend",note)}note.textContent=timingStatusMessage(name,tv,window.__timingStatusContext||{});}
   if(timingLevels) timingLevels.textContent=(tv.timing_high!=null&&tv.timing_low!=null)?`${Number(tv.timing_high).toFixed(2)} / ${Number(tv.timing_low).toFixed(2)}`:"—";
+  }
 }
 
-async function loadTrades(){try{const x=await api("/api/trading/trades?_=${Date.now()}");const groups={strategic:[],magical:[],timing:[]};(x.trades||[]).forEach(t=>{if(groups[t.strategy])groups[t.strategy].push(t)});renderTradeLog("strategic",groups.strategic);renderTradeLog("magical",groups.magical);renderTradeLog("timing",groups.timing)}catch(e){}}
+async function clearTradeLogs(){
+  if(!confirm("Delete all saved trade logs from trade_history.json? This cannot be undone. Open positions and POB recovery state are retained. Historical P&L restored after restart may change."))return;
+  try{await api("/api/trading/trades/clear",{method:"POST"});await loadTrades()}catch(e){alert("Could not clear logs: "+e.message)}
+}
+async function loadTrades(){try{const x=await api("/api/trading/trades?_=${Date.now()}");const groups={strategic:[],magical:[],timing:[],timing2:[],pob:[]};(x.trades||[]).forEach(t=>{if(groups[t.strategy])groups[t.strategy].push(t)});renderTradeLog("strategic",groups.strategic);renderTradeLog("magical",groups.magical);renderTradeLog("timing",groups.timing);renderTradeLog("timing2",groups.timing2);renderTradeLog("pob",groups.pob)}catch(e){}}
+function toggleTradeDetails(button){
+  const expanded=button.getAttribute("aria-expanded")!=="true";
+  button.setAttribute("aria-expanded",String(expanded));
+  button.setAttribute("aria-label",(expanded?"Collapse":"Expand")+" trade details");
+  button.innerHTML=logChevron(expanded);
+  document.getElementById(button.getAttribute("aria-controls")).hidden=!expanded;
+}
 function renderTradeLog(strategyName,rows){
-  const el=document.getElementById(strategyName+"TradeLog");
-  if(!rows.length){el.innerHTML='<div class="empty">No trades yet.</div>';return}
-  const ordered=[...rows].reverse();
-  const trades=[]; const openById={};
-  for(const t of ordered){
-    const id=t.trade_id||`${strategyName}-${t.time}-${t.side}-${t.action}-${t.price}`;
-    if(t.action==="OPEN"){
-      const item={id,open:t,close:null}; trades.push(item); if(t.trade_id)openById[t.trade_id]=item;
-    }else if(t.action==="CLOSE"){
-      const item=t.trade_id&&openById[t.trade_id] ? openById[t.trade_id] : null;
-      if(item){item.close=t;} else trades.push({id,open:null,close:t});
-    }
+  const card=document.getElementById(strategyName+"LogCard");
+  if(card){card.dataset.tradeCount=String(rows.length);card.style.display=rows.length||(window.__logActiveStrategies||[]).includes(strategyName)?"block":"none";}
+
+  const total=rows.reduce((sum,t)=>{
+    const value=Number(t.pnl);
+    return sum+(["CLOSE","PARTIAL_CLOSE"].includes(t.action)&&t.pnl!=null&&Number.isFinite(value)?value:0);
+  },0);
+  const pill=document.getElementById(strategyName+"LogPill");
+  if(pill){
+    pill.textContent="Logged P&L "+total.toFixed(2);
+    pill.className="pill "+(total>0?"pnl-positive":total<0?"pnl-negative":"");
+    pill.title="Total realized P&L across this strategy's saved logs, including partial closes. Excludes open positions.";
   }
-  trades.reverse();
-  el.innerHTML=trades.slice(0,30).map(x=>{
-    const o=x.open||{}; const c=x.close||{}; const side=c.side||o.side||""; const pnl=c.pnl!=null?Number(c.pnl):null;
-    const entry=o.price!=null?Number(o.price).toFixed(2):"—"; const exit=c.price!=null?Number(c.price).toFixed(2):"OPEN";
-    const reason=(c.message||"").replace(/^.*?— /,"")||"OPEN";
-    const exitHtml = c.price!=null ? `<span>${exit}</span>` : `<span>OPEN</span>`;
-    return `<div class="trade-row"><div class="trade-main"><b class="${side==='BUY'?'buy':'sell'}">${side}</b> • <span class="trade-flow"><span>Entry ${entry}</span><span class="trade-arrow" aria-hidden="true">→</span>${exitHtml}</span> • ${o.volume||c.volume||""} lot${pnl!=null?` • <b class="${pnl>=0?'pnl-positive':'pnl-negative'}">P&L ${pnl.toFixed(2)}</b>`:" • OPEN"}</div><div class="trade-sub">${o.time||c.time||""}${c.time?` → ${c.time}`:""} • ${reason}${c.sl!=null?` • SL ${Number(c.sl).toFixed(2)}`:""}</div></div>`;
-  }).join("");
+  const el=document.getElementById(strategyName+"TradeLog");
+  if(!el)return;
+  if(!rows.length){el.innerHTML='<div class="empty">No trades yet.</div>';return}
+  const groups=new Map();
+  [...rows].reverse().forEach((t,i)=>{
+    const id=t.trade_id||(t.ticket&&t.ticket!=="None"?"ticket-"+t.ticket:"event-"+i);
+    if(!groups.has(id))groups.set(id,{id,open:null,close:null,exits:[],index:i});
+    const item=groups.get(id);item.index=i;
+    if(t.action==="OPEN")item.open=t;
+    if(t.action==="CLOSE"||t.action==="PARTIAL_CLOSE")item.exits.push(t);
+    if(t.action==="CLOSE")item.close=t;
+  });
+  const trades=[...groups.values()].sort((a,b)=>Number(!!a.close)-Number(!!b.close)||b.index-a.index);
+  const expanded=new Set([...el.querySelectorAll('button[aria-expanded="true"]')].map(b=>b.dataset.tradeKey));
+  const fmt=v=>v==null||!Number.isFinite(Number(v))?"—":Number(v).toLocaleString(undefined,{maximumFractionDigits:5});
+  const esc=v=>escapePOB(String(v??"—"));
+  el.innerHTML='<div class="trade-table-scroll"><table class="trade-table"><thead><tr><th>Instrument</th><th>Side</th><th>Lot</th><th>Entry</th><th>Exit</th><th>SL</th><th>P&amp;L</th><th>Status</th><th>Details</th></tr></thead><tbody>'+trades.map((x,i)=>{
+    const o=x.open||{},c=x.close||{},last=x.close||x.exits.at(-1)||o;
+    const side=o.side||last.side||"",key=x.id;
+    const pnl=x.exits.length?x.exits.reduce((sum,t)=>sum+Number(t.pnl||0),0):null;
+    const status=x.close?"Closed":x.exits.length?"Partial":"Open";
+    const show=expanded.has(key),detailId=strategyName+"TradeDetail"+i;
+    const exitPrice=x.close?fmt(c.price):"—";
+    const exitInfo=x.exits.map(t=>`${esc(t.action==="PARTIAL_CLOSE"?"Partial close":"Close")}: ${esc(t.time)} · ${fmt(t.volume)} lot @ ${fmt(t.price)} · ${esc(t.message)}`).join('<br>');
+    return `<tr><td>${esc(displayInstrument(o.symbol||last.symbol))}</td><td class="${side==="BUY"?"buy":"sell"}">${esc(side)}</td><td>${fmt(o.volume??last.volume)}</td><td>${fmt(o.price)}</td><td>${exitPrice}</td><td>${fmt(last.sl??o.sl)}</td><td class="${pnl>0?"pnl-positive":pnl<0?"pnl-negative":""}">${pnl==null?"—":pnl.toFixed(2)}</td><td>${status}</td><td><button class="icon-btn" data-trade-key="${esc(key)}" aria-expanded="${show}" aria-controls="${detailId}" aria-label="${show?"Collapse":"Expand"} trade details" onclick="toggleTradeDetails(this)">${logChevron(show)}</button></td></tr><tr class="trade-detail" id="${detailId}" ${show?"":"hidden"}><td colspan="9"><div class="trade-detail-content"><span>Ticket: <b>${esc(o.ticket&&o.ticket!=="None"?o.ticket:last.ticket&&last.ticket!=="None"?last.ticket:"—")}</b></span><span>Entry time: ${esc(o.time)}</span><span>Target: ${fmt(last.target??o.target)}</span><span>Mode: ${esc(o.mode||last.mode)}</span></div>${exitInfo||"Position has no recorded exit. Floating P&amp;L is shown in Trading Monitor."}</td></tr>`;
+  }).join('')+'</tbody></table></div>';
+
 }
 if(window.timingStartTime) timingStartTime.addEventListener("change",strategyChanged); if(window.timingEndTime) timingEndTime.addEventListener("change",strategyChanged); if(window.btFrom) btFrom.addEventListener("change",clearBtRangeActive); if(window.btTo) btTo.addEventListener("change",clearBtRangeActive); document.querySelectorAll('input[name="strategy"]').forEach(e=>e.checked=false); renderStrategyPanels([]); renderMode(mode());setInterval(poll,1000);poll();testMT5();
 </script>

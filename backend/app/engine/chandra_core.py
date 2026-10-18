@@ -1308,10 +1308,11 @@ def close_position(position, symbol_info, live: bool, magic_number: int | None =
     return True
 
 
-def open_position(symbol: str, direction: str, volume: float, live: bool, sl: float | None = None, tp: float | None = None, magic_number: int = 26081201):
+def open_position(symbol: str, direction: str, volume: float, live: bool, sl: float | None = None, tp: float | None = None, magic_number: int = 26081201, diagnostic: dict | None = None):
     symbol_info = ensure_symbol(symbol)
     tick = mt5.symbol_info_tick(symbol)
     if tick is None:
+        if diagnostic is not None: diagnostic["message"] = f"No market tick for {symbol}"
         print(f"ERROR: No market tick for {symbol}")
         return False
     volume = normalize_volume(symbol_info, volume)
@@ -1328,6 +1329,7 @@ def open_position(symbol: str, direction: str, volume: float, live: bool, sl: fl
         return True
 
     if not modes:
+        if diagnostic is not None: diagnostic["message"] = f"No supported filling mode for {symbol}"
         print(f"ERROR opening {direction}: no supported filling mode for {symbol}")
         return False
 
@@ -1358,6 +1360,9 @@ def open_position(symbol: str, direction: str, volume: float, live: bool, sl: fl
 
         retcode = getattr(result, "retcode", None)
         comment = getattr(result, "comment", "")
+        if diagnostic is not None:
+            diagnostic["message"] = (f"MT5 retcode {retcode}: {comment}" if result is not None
+                else f"Order outcome unknown; MT5 returned no result ({mt5.last_error()})")
         print(
             f"ERROR opening {direction}: retcode={retcode}, "
             f"comment={comment}, filling_mode={filling_mode}"

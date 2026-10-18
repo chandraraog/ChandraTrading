@@ -1,10 +1,4 @@
-import uvicorn
+from backend.app.server_runner import run_dashboard
 
 if __name__ == "__main__":
-    uvicorn.run(
-        "backend.app.main:app",
-        host="127.0.0.1",
-        port=8000,
-        reload=False,
-        access_log=False,
-    )
+    run_dashboard("backend.app.main:app")
